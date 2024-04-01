@@ -1,0 +1,14 @@
+Javana HelloWorld:
+
+@main()
+{
+    decl int i, j, k, i;
+    decl week w;
+    var arr a = @int['c' = 1];
+
+    i = 1;
+    j = 2;
+    k = 3;
+    w = mon;
+    println(i, j, k, w);
+}
