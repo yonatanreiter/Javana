@@ -6,8 +6,10 @@ import edu.yu.compilers.intermediate.symtable.Predefined;
 import edu.yu.compilers.intermediate.symtable.SymTable;
 import edu.yu.compilers.intermediate.symtable.SymTableEntry;
 import edu.yu.compilers.intermediate.symtable.SymTableStack;
+import edu.yu.compilers.intermediate.type.TypeChecker;
 import edu.yu.compilers.intermediate.type.Typespec;
 import edu.yu.compilers.intermediate.util.CrossReferencer;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import static edu.yu.compilers.frontend.SemanticErrorHandler.Code.*;
 import static edu.yu.compilers.intermediate.symtable.SymTableEntry.Kind.*;
@@ -102,7 +104,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
             constantId = symTableStack.enterLocal(constantName, CONSTANT);
             constantId.setValue(constValue);
-            //constantId.setType(ctx.);
+            constantId.setType(TypeChecker.returnType(constantId));
 
         }
         else {
@@ -116,18 +118,6 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     *
-     * @param ctx
-     */
-    @Override
-    public Object visitMainArg(JavanaParser.MainArgContext ctx) {
-        return super.visitMainArg(ctx);
-    }
 
     /**
      * {@inheritDoc}
@@ -139,7 +129,24 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitGlobalDefinitions(JavanaParser.GlobalDefinitionsContext ctx) {
-        return super.visitGlobalDefinitions(ctx);
+        for (ParseTree child : ctx.children) {
+            if (child instanceof JavanaParser.VariableDeclContext) {
+                // Handle global variable declaration
+                visitVariableDecl((JavanaParser.VariableDeclContext) child);
+            } else if (child instanceof JavanaParser.ConstantDefContext) {
+                // Handle global constant definition
+                visitConstantDef((JavanaParser.ConstantDefContext) child);
+            } else if (child instanceof JavanaParser.FuncDefinitionContext) {
+                // Handle function definition
+                visitFuncDefinition((JavanaParser.FuncDefinitionContext) child);
+            } else if (child instanceof JavanaParser.RecordDeclContext) {
+                // Handle record type declaration
+                visitRecordDecl((JavanaParser.RecordDeclContext) child);
+            }
+            // Add more else-if branches as necessary for other kinds of global definitions
+        }
+
+        return null;
     }
 
     /**
@@ -151,7 +158,48 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      * @param ctx
      */
     @Override
+    public Object visitFunctionCall(JavanaParser.FunctionCallContext ctx) {
+//        String functionName = ctx.identifer().getText().toLowerCase();
+//        JavanaParser.ArgumentListContext listCtx = ctx.argumentList(); // Assuming this is how you access arguments
+//        SymTableEntry functionEntry = symTableStack.lookup(functionName);
+//        boolean isInvalidFunctionName = false;
+//
+//        if (functionEntry == null) {
+//            error.flag(UNDECLARED_IDENTIFIER, ctx);
+//            isInvalidFunctionName = true;
+//        } else if (functionEntry.getKind() != SymTableEntry.Kind.FUNCTION) {
+//            error.flag(NAME_MUST_BE_FUNCTION, ctx);
+//            isInvalidFunctionName = true;
+//        }
+//
+//        if (!isInvalidFunctionName) {
+//            // Assuming you have methods similar to the Pascal example to check arguments.
+//            checkCallArguments(listCtx, functionEntry.getRoutineParameters());
+//            // Set the context type based on the function's return type.
+//            ctx.type = functionEntry.getType();
+//        } else {
+//            // If the function name is invalid, you might still want to visit the arguments for error checking.
+//            for (JavanaParser.ArgumentContext argCtx : listCtx.argument()) {
+//                visit(argCtx);
+//            }
+//        }
+//
+//        // Assuming you have a way to associate a type with the context, as shown in the Pascal example.
+       return null; // Return the appropriate value based on your visitor design.
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
     public Object visitFuncDefinition(JavanaParser.FuncDefinitionContext ctx) {
+      //  ctx.blockStatement()
         return super.visitFuncDefinition(ctx);
     }
 
@@ -165,6 +213,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitFuncPrototype(JavanaParser.FuncPrototypeContext ctx) {
+        //ctx.funcArgList()
         return super.visitFuncPrototype(ctx);
     }
 
@@ -181,18 +230,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return super.visitFuncArgList(ctx);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     *
-     * @param ctx
-     */
-    @Override
-    public Object visitFuncArgument(JavanaParser.FuncArgumentContext ctx) {
-        return super.visitFuncArgument(ctx);
-    }
+
 
     /**
      * {@inheritDoc}
@@ -467,18 +505,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return super.visitPrintArgument(ctx);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     *
-     * @param ctx
-     */
-    @Override
-    public Object visitExpression(JavanaParser.ExpressionContext ctx) {
-        return super.visitExpression(ctx);
-    }
+
 
     /**
      * {@inheritDoc}
@@ -519,18 +546,6 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return super.visitReadLineCall(ctx);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     *
-     * @param ctx
-     */
-    @Override
-    public Object visitFunctionCall(JavanaParser.FunctionCallContext ctx) {
-        return super.visitFunctionCall(ctx);
-    }
 
     /**
      * {@inheritDoc}
