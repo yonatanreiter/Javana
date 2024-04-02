@@ -11,7 +11,7 @@ program
     ;
 
 programHeader 
-    : 'Javana' identifier ':'
+    : 'Javana' identifer ':'
     ;
 
 mainMethod 
@@ -19,7 +19,7 @@ mainMethod
     ;
 
 mainArg 
-    : identifier ':' stringArrType 
+    : identifer ':' stringArrType 
     ;
 
 globalDefinitions 
@@ -33,8 +33,9 @@ funcDefinition
     : funcPrototype blockStatement 
     ;
 
-funcPrototype  
-    : 'func' identifier '(' funcArgList? ')' '->' returnType 
+
+funcPrototype
+    : 'func' identifer '(' funcArgList? ')' '->' returnType #FunctionPrototype
     ;
 
 funcArgList    
@@ -53,7 +54,7 @@ returnType
 // Name Definitions and Declarations -------
 
 recordDecl
-    : 'record' identifier '{' (typeAssoc)* '}'
+    : 'record' identifer '{' (typeAssoc)* '}'
     ;
 
 variableDecl 
@@ -61,19 +62,19 @@ variableDecl
     ;
 
 typeAssoc
-    : nameList ':' type
+    : nameList ':' type #TypeAssociation
     ;
 
-variableDef  
-    : 'var' nameList '=' expression 
+variableDef
+    : 'var' nameList '=' expression #VariableDefinition
     ;
 
-constantDef  
-    : 'const' nameList '=' expression 
+constantDef
+    : 'const' nameList '=' expression #ConstantDefinition
     ;
 
 nameList 
-    : identifier (',' identifier)* 
+    : identifer (',' identifer)* 
     ;
     
 
@@ -109,12 +110,12 @@ nameDeclDefStatement
     ;
     
 assignmentStatement        
-    : identifier identModifier? '=' expression 
+    : identifer identModifier? '=' expression 
     ;
 
 identModifier
     : arrIdxSpecifier
-    | '.' identifier
+    | '.' identifer
     ;
 
 arrIdxSpecifier
@@ -156,25 +157,25 @@ printArgument
 
 // Expressions -----------------------------
 
-expression 
-    : expression arrIdxSpecifier            
-    | expression '.' 'length'
-    | expression '.' identifier                   
-    | expression HIGHER_ARITH_OP expression   
-    | expression ARITH_OP expression          
-    | expression REL_OP expression            
-    | expression EQ_OP expression             
-    | expression COND_OP expression           
-    | '!' expression                          
-    | '-' expression                          
-    | '(' expression ')'                         
-    | readCharCall
-    | readLineCall
-    | functionCall
-    | identifier                                
-    | literal                                    
-    | newArray                                   
-    | newRecord                                  
+expression
+    : expression arrIdxSpecifier #ArrayIndexExpression
+    | expression '.' 'length' #StringLengthExpression
+    | expression '.' identifer #RecordFieldExpression
+    | expression HIGHER_ARITH_OP expression #HigherArithmeticExpression
+    | expression ARITH_OP expression #ArithmeticExpression
+    | expression REL_OP expression #RelationalExpression
+    | expression EQ_OP expression #EqualityExpression
+    | expression COND_OP expression #ConditionalExpression
+    | '!' expression #NotExpression
+    | '-' expression #NegateExpression
+    | '(' expression ')' #ParenthesizedExpression
+    | readCharCall #ReadCharCallExpression
+    | readLineCall #ReadLineCallExpression
+    | functionCall #FunctionCallExpression
+    | identifer #IdentifierExpression
+    | literal #LiteralExpression
+    | newArray #NewArrayExpression
+    | newRecord #NewRecordExpression
     ;
 
 exprList
@@ -190,19 +191,19 @@ readLineCall
     ;
 
 functionCall 
-    : identifier '(' exprList? ')' 
+    : identifer '(' exprList? ')' 
     ;
 
 newArray 
-    : '@' (scalarType | identifier) arrIdxSpecifier 
+    : '@' (scalarType | identifer) arrIdxSpecifier 
     ;
 
 newRecord
-    : '@' identifier '{' varInitList? '}'
+    : '@' identifer '{' varInitList? '}'
     ;
 
 varInitList
-    : identifier '=' expression (',' identifier '=' expression)*
+    : identifer '=' expression (',' identifer '=' expression)*
     ;
 
 literal 
@@ -225,18 +226,18 @@ scalarType
     | stringType
     ;
 
-compositeType 
-    : recordType
-    | integerArrType
-    | booleanArrType
-    | stringArrType
-    | recordArrType
+compositeType
+    : recordType #RecordCompositeType
+    | integerArrType #IntegerArrayCompositeType
+    | booleanArrType #BooleanArrayCompositeType
+    | stringArrType #StringArrayCompositeType
+    | recordArrType #RecordArrayCompositeType
     ;
 
 integerType : INT_TYPE ;
 booleanType : BOOL_TYPE ;
 stringType  : STR_TYPE ;
-recordType  : identifier ;
+recordType  : identifer ;
 
 integerArrType : INT_ARR_TYPE ;
 booleanArrType : BOOL_ARR_TYPE ;
@@ -245,7 +246,7 @@ recordArrType  : REC_ARR_TYPE ;
 
 // Misc Rules
 
-identifier
+identifer
     : IDENT
     ;
 
