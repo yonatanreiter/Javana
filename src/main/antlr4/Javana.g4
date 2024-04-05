@@ -7,19 +7,19 @@ package antlr4;
 // Program and routines --------------------
 
 program 
-    : programHeader globalDefinitions* mainMethod globalDefinitions* 
+    : hdr=programHeader defs+=globalDefinitions* main=mainMethod defs+=globalDefinitions*
     ;
 
-programHeader 
-    : 'Javana' identifer ':'
+programHeader
+    : 'Javana' name=identifier ':'
     ;
 
-mainMethod 
-    : '@main' '(' mainArg? ')' blockStatement 
+mainMethod
+    : '@main' '(' args=mainArg? ')' body=blockStatement
     ;
 
-mainArg 
-    : identifer ':' stringArrType 
+mainArg
+    : name=identifier ':' stringArrType
     ;
 
 globalDefinitions 
@@ -30,52 +30,53 @@ globalDefinitions
 // Function Definitions and Declarations ---
 
 funcDefinition 
-    : funcPrototype blockStatement 
+    : proto=funcPrototype body=blockStatement
     ;
-
 
 funcPrototype
-    : 'func' identifer '(' funcArgList? ')' '->' returnType #FunctionPrototype
+    : 'func' name=identifier '(' argList+=funcArgList? ')' '->' return=returnType
     ;
 
-funcArgList    
-    : funcArgument (',' funcArgument)* 
+funcArgList
+    : args+=funcArgument (',' args+=funcArgument)*
     ;
 
-funcArgument   
-    : typeAssoc 
+funcArgument
+    : typeAssoc
     ;
 
 returnType
     : type
-    | 'None'
+    | None
     ;
 
 // Name Definitions and Declarations -------
 
 recordDecl
-    : 'record' identifer '{' (typeAssoc)* '}'
+    : 'record' name=identifier '{' fields+=typeAssoc* '}'
     ;
 
-variableDecl 
-    : 'decl' typeAssoc 
+variableDecl
+    : 'decl' assoc=typeAssoc
     ;
 
 typeAssoc
-    : nameList ':' type #TypeAssociation
+    : namelst=nameList ':' t=type
     ;
 
 variableDef
-    : 'var' nameList '=' expression #VariableDefinition
+    : 'var' namelst=nameList '=' expr=expression #VariableDefinition
     ;
 
 constantDef
-    : 'const' nameList '=' expression #ConstantDefinition
+    : 'const' namelst=nameList '=' expr=expression #ConstantDefinition
     ;
 
-nameList 
-    : identifer (',' identifer)* 
+nameList
+    : names+=identifier (',' names+=identifier)*
     ;
+
+
     
 
 // Statements ------------------------------
@@ -95,7 +96,7 @@ statement
     ;
 
 blockStatement 
-    : '{' (statement)* '}' 
+    : '{' stmts+=statement* '}'
     ;
 
 nameDeclStatement
@@ -108,51 +109,55 @@ nameDeclDefStatement
     | constantDef
     | funcDefinition
     ;
-    
-assignmentStatement        
-    : identifer identModifier? '=' expression 
+
+assignmentStatement
+    : var=variable '=' expr=expression
     ;
 
-identModifier
-    : arrIdxSpecifier
-    | '.' identifer
+variable
+    : name=identifier modifiers+=varModifier*
+    ;
+
+varModifier
+    : arrIdxSpecifier   # varArrayIndexModfier
+    | '.' identifier    # varRecordFieldModifier
     ;
 
 arrIdxSpecifier
-    : '[' expression ']'
+    : '[' expr=expression ']'
     ;
 
-ifStatement 
-    : 'if' '(' expression ')' blockStatement ('else' blockStatement)? 
+ifStatement
+    : 'if' '(' condition=expression ')' thenStmt=blockStatement ('else' elseStmt=blockStatement)?
     ;
 
-forStatement 
-    : 'for' '(' variableDef? ';' expression ';' expression ')' blockStatement 
+forStatement
+    : 'for' '(' init=variableDef? ';' condition=expression ';' updateExpr=expression ')' body=blockStatement
     ;
 
-whileStatement 
-    : 'while' '(' expression ')' blockStatement 
+whileStatement
+    : 'while' '(' condition=expression ')' body=blockStatement
     ;
 
-expressionStatement 
-    : expression 
+expressionStatement
+    : expr=expression
     ;
 
-returnStatement 
-    : 'return' expression? 
+returnStatement
+    : 'return' expr=expression?
     ;
 
 printStatement
-    : 'print' printArgument 
+    : 'print' arg=printArgument
     ;
 
 printLineStatement
-    : 'println' printArgument?
+    : 'println' arg=printArgument?
     ;
 
 printArgument
-    : expression
-    | '(' exprList ')'
+    : expression        # PrintSingleValue
+    | '(' exprList ')'  # FormattedPrint
     ;
 
 // Expressions -----------------------------
@@ -160,7 +165,7 @@ printArgument
 expression
     : expression arrIdxSpecifier #ArrayIndexExpression
     | expression '.' 'length' #StringLengthExpression
-    | expression '.' identifer #RecordFieldExpression
+    | expression '.' identifier #RecordFieldExpression
     | expression HIGHER_ARITH_OP expression #HigherArithmeticExpression
     | expression ARITH_OP expression #ArithmeticExpression
     | expression REL_OP expression #RelationalExpression
@@ -172,14 +177,14 @@ expression
     | readCharCall #ReadCharCallExpression
     | readLineCall #ReadLineCallExpression
     | functionCall #FunctionCallExpression
-    | identifer #IdentifierExpression
+    | identifier #IdentifierExpression
     | literal #LiteralExpression
     | newArray #NewArrayExpression
     | newRecord #NewRecordExpression
     ;
 
 exprList
-    : expression (',' expression)*
+    : exprs+=expression (',' exprs+=expression)*
     ;
 
 readCharCall
@@ -190,27 +195,31 @@ readLineCall
     : 'readln' '(' ')'
     ;
 
-functionCall 
-    : identifer '(' exprList? ')' 
+functionCall
+    : name=identifier '(' args=exprList? ')'
     ;
 
-newArray 
-    : '@' (scalarType | identifer) arrIdxSpecifier 
+newArray
+    : '@' (scalarType | identifier) arrIdxSpecifier
     ;
 
 newRecord
-    : '@' identifer '{' varInitList? '}'
+    : '@' identifier '{' init=fieldInitList? '}'
     ;
 
-varInitList
-    : identifer '=' expression (',' identifer '=' expression)*
+fieldInitList
+    : init+=fieldInit (',' init+=fieldInit)*
+    ;
+
+fieldInit
+    : field=identifier '=' expr=expression
     ;
 
 literal 
-    : INTEGER
-    | BOOL        
-    | STRING      
-    | NULL_VALUE  
+    : INTEGER   # IntegerLiteral
+    | BOOL      # BooleanLiteral
+    | STRING    # StringLiteral
+    | None      # NoneValue
     ;
 
 // Types -----------------------------------
@@ -237,7 +246,7 @@ compositeType
 integerType : INT_TYPE ;
 booleanType : BOOL_TYPE ;
 stringType  : STR_TYPE ;
-recordType  : identifer ;
+recordType  : identifier ;
 
 integerArrType : INT_ARR_TYPE ;
 booleanArrType : BOOL_ARR_TYPE ;
@@ -246,9 +255,14 @@ recordArrType  : REC_ARR_TYPE ;
 
 // Misc Rules
 
-identifer
+identifier
     : IDENT
     ;
+
+None
+    : NULL_VALUE
+    ;
+
 
 // Lexer tokens
 
