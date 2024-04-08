@@ -273,16 +273,57 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         boolean oneIsInt = TypeChecker.returnType(lhs).getIdentifier().getName().equals("integer") || TypeChecker.returnType(rhs).getIdentifier().getName().equals("integer");
 
 
-
-        if(TypeChecker.returnType(rhs) != TypeChecker.returnType(lhs)){
-            if(operators.contains(operator) && oneIsInt){
-                error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(),ctx.getText());
+        if (TypeChecker.returnType(rhs) != TypeChecker.returnType(lhs)) {
+            if (oneIsInt) {
+                error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.getText());
+            }
+            return null;
+        } else if (!oneIsInt) {
+            error.flag(INVALID_OPERATOR, ctx.getStart().getLine(), ctx.getText());
+        } else {
+            if (operator.equals("+")) {
+                return (int) lhs + (int) rhs;
+            } else {
+                return (int) lhs - (int) rhs;
             }
         }
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitHigherArithmeticExpression(JavanaParser.HigherArithmeticExpressionContext ctx) {
+        Object lhs = visit(ctx.children.get(0));
+        Object rhs = visit(ctx.children.get(2));
+        String operator = ctx.children.get(1).getText();
+        boolean oneIsInt = TypeChecker.returnType(lhs).getIdentifier().getName().equals("integer") || TypeChecker.returnType(rhs).getIdentifier().getName().equals("integer");
 
 
-
-        return super.visitArithmeticExpression(ctx);
+        if (TypeChecker.returnType(rhs) != TypeChecker.returnType(lhs)) {
+            if (oneIsInt) {
+                error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.getText());
+            }
+            return null;
+        } else if (!oneIsInt) {
+            error.flag(INVALID_OPERATOR, ctx.getStart().getLine(), ctx.getText());
+        } else {
+            if (operator.equals("*")) {
+                return (int) lhs * (int) rhs;
+            } else if (operator.equals("/")) {
+                return (int) lhs / (int) rhs;
+            }
+            else{
+                return (int) lhs % (int) rhs;
+            }
+        }
+        return null;
     }
 
     /**
