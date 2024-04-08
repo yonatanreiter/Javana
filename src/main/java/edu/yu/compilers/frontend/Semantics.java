@@ -12,6 +12,8 @@ import edu.yu.compilers.intermediate.type.Typespec;
 import edu.yu.compilers.intermediate.util.CrossReferencer;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Stack;
 
 import static edu.yu.compilers.frontend.SemanticErrorHandler.Code.*;
@@ -25,6 +27,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     private final SymTableStack symTableStack;
     private final SemanticErrorHandler error;
     private SymTableEntry programId;
+    Set<String> operators =  Set.of("+", "-", "*", "/", "%");
 
     public Semantics() {
 
@@ -234,6 +237,26 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitIdentifier(JavanaParser.IdentifierContext ctx) {
+        Object value = visit(ctx);
+
+        if(value == null){
+            error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(),ctx.getText());
+        }
+
+        return null;
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -244,23 +267,21 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitArithmeticExpression(JavanaParser.ArithmeticExpressionContext ctx) {
-        if(ctx.children.get(0) instanceof JavanaParser.IdentifierExpressionContext){
-            JavanaParser.IdentifierExpressionContext identifier = (JavanaParser.IdentifierExpressionContext) ctx.children.get(0);
-            Object value = visit(identifier);
+        Object lhs = visit(ctx.children.get(0));
+        Object rhs = visit(ctx.children.get(2));
+        String operator = ctx.children.get(1).getText();
+        boolean oneIsInt = TypeChecker.returnType(lhs).getIdentifier().getName().equals("integer") || TypeChecker.returnType(rhs).getIdentifier().getName().equals("integer");
 
-            if(value == null){
-                error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(),identifier.getText());
+
+
+        if(TypeChecker.returnType(rhs) != TypeChecker.returnType(lhs)){
+            if(operators.contains(operator) && oneIsInt){
+                error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(),ctx.getText());
             }
         }
 
-        if(ctx.children.get(2) instanceof JavanaParser.IdentifierExpressionContext){
-            JavanaParser.IdentifierExpressionContext identifier = (JavanaParser.IdentifierExpressionContext) ctx.children.get(2);
-            Object value = visit(identifier);
 
-            if(value == null){
-                error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(),identifier.getText());
-            }
-        }
+
         return super.visitArithmeticExpression(ctx);
     }
 
@@ -275,7 +296,11 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     @Override
     public Object visitIdentifierExpression(JavanaParser.IdentifierExpressionContext ctx) {
         String varName = ctx.getText();
-        return symTableStack.get(symTableStack.getCurrentNestingLevel()).get(varName);
+        SymTableEntry frame =  symTableStack.get(symTableStack.getCurrentNestingLevel()).get(varName);
+
+        if(frame == null)return null;
+
+        return frame.getValue();
 
     }
 
@@ -290,10 +315,72 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     @Override
     public Object visitLiteralExpression(JavanaParser.LiteralExpressionContext ctx) {
 
-        return 0;
+        if(ctx.literal() instanceof JavanaParser.IntegerLiteralContext){
+            return visitIntegerLiteral((JavanaParser.IntegerLiteralContext) ctx.literal());
+        }
+        else if(ctx.literal() instanceof JavanaParser.StringLiteralContext){
+            return visitStringLiteral((JavanaParser.StringLiteralContext) ctx.literal());
+
+        }
+        else if(ctx.literal() instanceof JavanaParser.BooleanLiteralContext){
+            return visitBooleanLiteral((JavanaParser.BooleanLiteralContext) ctx.literal());
+
+        }
+
+        return null;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitIntegerLiteral(JavanaParser.IntegerLiteralContext ctx) {
+        return Integer.parseInt(ctx.INTEGER().getText());
+    }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitBooleanLiteral(JavanaParser.BooleanLiteralContext ctx) {
+        return Boolean.parseBoolean(ctx.BOOL().getText());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitStringLiteral(JavanaParser.StringLiteralContext ctx) {
+        return ctx.STRING().getText();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitNoneValue(JavanaParser.NoneValueContext ctx) {
+        return super.visitNoneValue(ctx);
+    }
 
     /**
      * {@inheritDoc}
