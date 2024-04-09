@@ -215,7 +215,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitNameDeclDefStatement(JavanaParser.NameDeclDefStatementContext ctx) {
-       //just visit whatever is actually relevant here
+        //just visit whatever is actually relevant here
         visit(ctx.children.get(0));
 
         return null;
@@ -324,6 +324,22 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      *
      * @param ctx
      */
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitPrintLineStatement(JavanaParser.PrintLineStatementContext ctx) {
+        System.out.printf("Print: %s\n", visit(ctx.printArgument().children.get(0).getChild(1)));
+
+        return null;
+    }
     @Override
     public Object visitHigherArithmeticExpression(JavanaParser.HigherArithmeticExpressionContext ctx) {
         Object lhs = visit(ctx.children.get(0));
@@ -361,22 +377,46 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      * @param ctx
      */
     @Override
-    public Object visitPrintLineStatement(JavanaParser.PrintLineStatementContext ctx) {
-        System.out.printf("Print c: %s\n", visit(ctx.printArgument().children.get(0).getChild(1)));
-
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     *
-     * @param ctx
-     */
-    @Override
     public Object visitEqualityExpression(JavanaParser.EqualityExpressionContext ctx) {
+        Object lhs = visit(ctx.expression(0));
+        Object rhs = visit(ctx.expression(1));
+        String operator = ctx.EQ_OP().getText();
+
+        // Ensure both operands are of the same type
+        if (TypeChecker.returnType(lhs) != TypeChecker.returnType(rhs)) {
+            error.flag(TYPE_MISMATCH, ctx.getStart().getLine(), ctx.getText());
+            return null;
+        }
+
+        // If both are integers, check equality based on the operator
+        if (lhs instanceof Integer && rhs instanceof Integer) {
+            if (operator.equals("==")) {
+                return lhs.equals(rhs); // or (int)lhs == (int)rhs
+            } else {
+                return !lhs.equals(rhs); // or (int)lhs != (int)rhs
+            }
+        }
+
+        // If both are booleans, check equality based on the operator
+        if (lhs instanceof Boolean && rhs instanceof Boolean) {
+            if (operator.equals("==")) {
+                return lhs.equals(rhs); // or (boolean)lhs == (boolean)rhs
+            } else {
+                return !lhs.equals(rhs); // or (boolean)lhs != (boolean)rhs
+            }
+        }
+
+        // If both are strings, check equality using .equals()
+        if (lhs instanceof String && rhs instanceof String) {
+            if (operator.equals("==")) {
+                return lhs.equals(rhs);
+            } else {
+                return !lhs.equals(rhs);
+            }
+        }
+
+        // If types are not compatible or operator is not recognized, flag an error
+        error.flag(INVALID_OPERATOR, ctx.getStart().getLine(), ctx.getText());
         return null;
     }
 
