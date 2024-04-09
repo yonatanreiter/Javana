@@ -361,9 +361,37 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      * @param ctx
      */
     @Override
+    public Object visitPrintLineStatement(JavanaParser.PrintLineStatementContext ctx) {
+        System.out.printf("Print c: %s\n", visit(ctx.printArgument().children.get(0).getChild(1)));
+
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitEqualityExpression(JavanaParser.EqualityExpressionContext ctx) {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
     public Object visitIdentifierExpression(JavanaParser.IdentifierExpressionContext ctx) {
         String varName = ctx.getText();
-        SymTableEntry frame =  symTableStack.get(symTableStack.getCurrentNestingLevel()).get(varName);
+        SymTableEntry frame =  symTableStack.lookup(varName);
 
         if(frame == null)return null;
 
