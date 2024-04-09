@@ -67,8 +67,9 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
     @Override
     public Object visitProgram(JavanaParser.ProgramContext ctx) {
-        visit(ctx.programHeader());
-        visit(ctx.mainMethod());
+        for(ParseTree child : ctx.children){
+            visit(child);
+        }
 
         return null;
     }
@@ -87,6 +88,25 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitGlobalDefinitions(JavanaParser.GlobalDefinitionsContext ctx) {
+        for (ParseTree child : ctx.children) {
+            visit(child);
+            // Add more else-if branches as necessary for other kinds of global definitions
+        }
+
+        return null;
+    }
+
+
     @Override
     public Object visitMainMethod(JavanaParser.MainMethodContext ctx){
         JavanaParser.BlockStatementContext blockCtx = ctx.blockStatement();
@@ -96,6 +116,8 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         symTableStack.pop();
         return null;
     }
+
+
 
 
     @Override
@@ -218,17 +240,21 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
             Object varVal = visit(ctx.expression());
 
-            varId = symTableStack.enterLocal(varName, VARIABLE);
-            varId.setValue(varVal);
-            varId.setType(TypeChecker.returnType(varVal));
+            if(varVal != null) {
+                varId = symTableStack.enterLocal(varName, VARIABLE);
+
+                varId.setValue(varVal);
+                varId.setType(TypeChecker.returnType(varVal));
+            }
 
 
         }
         else {
             error.flag(REDECLARED_IDENTIFIER, ctx.getStart().getLine(), varName);
 
-//            idCtx.entry = constantId;
-//            idCtx.type = Predefined.integerType;
+            varId = symTableStack.enterLocal(varName, VARIABLE);
+//            varId.setValue(0);
+//            varId.setType(Predefined.undefinedType);
         }
 
 
@@ -421,36 +447,6 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     @Override
     public Object visitNoneValue(JavanaParser.NoneValueContext ctx) {
         return super.visitNoneValue(ctx);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     *
-     * @param ctx
-     */
-    @Override
-    public Object visitGlobalDefinitions(JavanaParser.GlobalDefinitionsContext ctx) {
-        for (ParseTree child : ctx.children) {
-            if (child instanceof JavanaParser.VariableDeclContext) {
-                // Handle global variable declaration
-                visitVariableDecl((JavanaParser.VariableDeclContext) child);
-            } else if (child instanceof JavanaParser.ConstantDefContext) {
-                // Handle global constant definition
-                visitConstantDefinition((JavanaParser.ConstantDefinitionContext) child);
-            } else if (child instanceof JavanaParser.FuncDefinitionContext) {
-                // Handle function definition
-                visitFuncDefinition((JavanaParser.FuncDefinitionContext) child);
-            } else if (child instanceof JavanaParser.RecordDeclContext) {
-                // Handle record type declaration
-                visitRecordDecl((JavanaParser.RecordDeclContext) child);
-            }
-            // Add more else-if branches as necessary for other kinds of global definitions
-        }
-
-        return null;
     }
 
 
