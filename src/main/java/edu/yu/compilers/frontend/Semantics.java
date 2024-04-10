@@ -12,9 +12,7 @@ import edu.yu.compilers.intermediate.type.Typespec;
 import edu.yu.compilers.intermediate.util.CrossReferencer;
 import org.antlr.v4.runtime.tree.ParseTree;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 import static edu.yu.compilers.frontend.SemanticErrorHandler.Code.*;
 import static edu.yu.compilers.intermediate.symtable.SymTableEntry.Kind.*;
@@ -106,6 +104,38 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitVariableDecl(JavanaParser.VariableDeclContext ctx) {
+        visit(ctx.typeAssoc());
+
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitTypeAssoc(JavanaParser.TypeAssocContext ctx) {
+        for(JavanaParser.IdentifierContext name : ctx.namelst.names) {
+            SymTableEntry decl = symTableStack.enterLocal(name.getText(), VARIABLE);
+            decl.setType(TypeChecker.returnType(ctx.children.get(2).getText()));
+        }
+
+        return null;
+    }
 
     @Override
     public Object visitMainMethod(JavanaParser.MainMethodContext ctx){
@@ -117,15 +147,92 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitFunctionCallExpression(JavanaParser.FunctionCallExpressionContext ctx) {
+        SymTableEntry function = symTableStack.lookup(ctx.functionCall().identifier().getText());
+        List<SymTableEntry> params = function.getRoutineParameters();
+        int argsPassed = ctx.functionCall().exprList() == null? 0 : ctx.functionCall().exprList().expression().size();
+
+        if(params.size() != argsPassed){
+            error.flag(ARGUMENT_COUNT_MISMATCH, ctx.getStart().getLine(), ctx.getText());
+        }
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitFuncPrototype(JavanaParser.FuncPrototypeContext ctx) {
+        String funcName = ctx.name.getText();
+        Typespec type = TypeChecker.returnType(ctx.returnType().children.get(0).getText());
+        List<JavanaParser.FuncArgumentContext> parameters = ctx.funcArgList().args;
+
+        SymTableEntry routineId = symTableStack.lookupLocal(funcName);
+
+        if (routineId != null) {
+            error.flag(REDECLARED_IDENTIFIER, ctx.getStart().getLine(), funcName);
+            return null;
+        }
+
+        routineId = symTableStack.enterLocal(funcName, FUNCTION);
+        routineId.setRoutineCode(SymTableEntry.Routine.DECLARED);
+        routineId.setType(type);
+
+        SymTableEntry parentId = symTableStack.getLocalSymTable().getOwner();
+        parentId.appendSubroutine(routineId);
+
+        routineId.setRoutineSymTable(symTableStack.push());
+
+        SymTable symTable = symTableStack.getLocalSymTable();
+        symTable.setOwner(routineId);
+
+        if (parameters != null) {
+            List<SymTableEntry> parameterIds = new ArrayList<>();
+            for(JavanaParser.FuncArgumentContext arg : parameters){
+                //pull out type assoc
+                JavanaParser.TypeAssocContext typeAssoc = arg.typeAssoc();
 
 
+                //deal with type assoc
+                for(JavanaParser.IdentifierContext name : typeAssoc.namelst.names) {
+                    SymTableEntry entry = routineId.getRoutineSymTable().enter(name.getText(), VALUE_PARAMETER);
+                    entry.setType(TypeChecker.returnType(typeAssoc.children.get(2).getText()));
+                    parameterIds.add(entry);
+                }
+
+                routineId.setRoutineParameters((ArrayList<SymTableEntry>) parameterIds);
+
+                for (SymTableEntry paramId : parameterIds) {
+                    paramId.setSlotNumber(symTable.nextSlotNumber());
+                }
+
+            }
+
+        }
+
+        return null;
+    }
 
     @Override
     public Object visitConstantDefinition(JavanaParser.ConstantDefinitionContext ctx) {
 
 
         String constantName = ctx.nameList().identifier(0).getText().toLowerCase(); // Adjust based on actual method names
-        SymTableEntry constantId = symTableStack.lookupLocal(constantName);
+        SymTableEntry constantId = symTableStack.lookup(constantName);
 
         if (constantId == null) {
 
@@ -178,7 +285,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         String lhs = ctx.variable().name.getText();
 
-        SymTableEntry variable = symTableStack.lookupLocal(lhs);
+        SymTableEntry variable = symTableStack.lookup(lhs);
 
         if(variable == null){
             error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(),lhs);
@@ -274,13 +381,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitIdentifier(JavanaParser.IdentifierContext ctx) {
-        Object value = visit(ctx);
-
-        if(value == null){
-            error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(),ctx.getText());
-        }
-
-        return null;
+        return ctx.getText();
     }
 
     /**
@@ -503,6 +604,8 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     public Object visitStringLiteral(JavanaParser.StringLiteralContext ctx) {
         return ctx.STRING().getText();
     }
+
+
 
     /**
      * {@inheritDoc}
