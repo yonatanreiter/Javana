@@ -328,6 +328,43 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitRelationalExpression(JavanaParser.RelationalExpressionContext ctx) {
+        Object lhs = visit(ctx.expression(0)); // Visit left-hand side expression
+        Object rhs = visit(ctx.expression(1)); // Visit right-hand side expression
+        String operator = ctx.REL_OP().getText(); // Get the relational operator
+
+        if (!(lhs instanceof Integer && rhs instanceof Integer)) {
+            error.flag(TYPE_MISMATCH, ctx.getStart().getLine(),ctx.getText());
+            return null;
+        }
+
+        int lhsInt = (Integer) lhs;
+        int rhsInt = (Integer) rhs;
+
+        switch (operator) {
+            case ">":
+                return lhsInt > rhsInt;
+            case "<":
+                return lhsInt < rhsInt;
+            case ">=":
+                return lhsInt >= rhsInt;
+            case "<=":
+                return lhsInt <= rhsInt;
+            default:
+                error.flag(INVALID_OPERATOR, ctx.getStart().getLine(),ctx.getText());
+                return null;
+        }
+    }
+
 
     /**
      * {@inheritDoc}
@@ -410,9 +447,13 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         } else {
             if (operator.equals("+")) {
                 return (int) lhs + (int) rhs;
-            } else {
+            }
+            if (operator.equals("-")) {
                 return (int) lhs - (int) rhs;
             }
+//            else {
+//                return (int) lhs - (int) rhs;
+//            }
         }
         return null;
     }
