@@ -63,6 +63,41 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         crossReferencer.print(symTableStack);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitConditionalExpression(JavanaParser.ConditionalExpressionContext ctx) {
+        Object lhs = visit(ctx.expression(0)); // Visit left-hand side expression
+        Object rhs = visit(ctx.expression(1)); // Visit right-hand side expression
+        String operator = ctx.COND_OP().getText(); // Get the conditional operator
+
+        // Check that both lhs and rhs are Boolean values
+        if (!(lhs instanceof Boolean && rhs instanceof Boolean)) {
+            error.flag(TYPE_MUST_BE_BOOLEAN, ctx.getStart().getLine(),ctx.getText());
+            return null;
+        }
+
+        boolean lhsBool = (Boolean) lhs;
+        boolean rhsBool = (Boolean) rhs;
+
+        // Perform the logical operation based on the operator
+        if (operator.equals("&&")) {
+            return lhsBool && rhsBool;
+        } else if (operator.equals("||")) {
+            return lhsBool || rhsBool;
+        } else {
+            error.flag(INVALID_OPERATOR, ctx.getStart().getLine(),ctx.getText());
+            return null;
+        }
+    }
+
+
     @Override
     public Object visitProgram(JavanaParser.ProgramContext ctx) {
         for(ParseTree child : ctx.children){
