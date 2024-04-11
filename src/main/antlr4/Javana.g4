@@ -6,7 +6,7 @@ package antlr4;
 
 // Program and routines --------------------
 
-program 
+program
     : hdr=programHeader defs+=globalDefinitions* main=mainMethod defs+=globalDefinitions*
     ;
 
@@ -22,14 +22,14 @@ mainArg
     : name=identifier ':' stringArrType
     ;
 
-globalDefinitions 
-    : nameDeclStatement 
+globalDefinitions
+    : nameDeclStatement
     | nameDeclDefStatement
     ;
 
 // Function Definitions and Declarations ---
 
-funcDefinition 
+funcDefinition
     : proto=funcPrototype body=blockStatement
     ;
 
@@ -77,15 +77,15 @@ nameList
     ;
 
 
-    
+
 
 // Statements ------------------------------
 
-statement 
-    : blockStatement                  
+statement
+    : blockStatement
     | nameDeclStatement
-    | nameDeclDefStatement             
-    | assignmentStatement 
+    | nameDeclDefStatement
+    | assignmentStatement
     | ifStatement
     | forStatement
     | whileStatement
@@ -95,7 +95,7 @@ statement
     | printLineStatement
     ;
 
-blockStatement 
+blockStatement
     : '{' stmts+=statement* '}'
     ;
 
@@ -163,8 +163,7 @@ printArgument
 // Expressions -----------------------------
 
 expression
-    : expression arrIdxSpecifier #ArrayIndexExpression
-    | expression '.' 'length' #StringLengthExpression
+    : expression '.' 'length' #StringLengthExpression
     | expression '.' identifier #RecordFieldExpression
     | expression HIGHER_ARITH_OP expression #HigherArithmeticExpression
     | expression ARITH_OP expression #ArithmeticExpression
@@ -172,7 +171,6 @@ expression
     | expression EQ_OP expression #EqualityExpression
     | expression COND_OP expression #ConditionalExpression
     | '!' expression #NotExpression
-    | '-' expression #NegateExpression
     | '(' expression ')' #ParenthesizedExpression
     | readCharCall #ReadCharCallExpression
     | readLineCall #ReadLineCallExpression
@@ -215,7 +213,7 @@ fieldInit
     : field=identifier '=' expr=expression
     ;
 
-literal 
+literal
     : INTEGER   # IntegerLiteral
     | BOOL      # BooleanLiteral
     | STRING    # StringLiteral
@@ -224,12 +222,12 @@ literal
 
 // Types -----------------------------------
 
-type 
-    : scalarType    
-    | compositeType 
+type
+    : scalarType
+    | compositeType
     ;
 
-scalarType 
+scalarType
     : integerType
     | booleanType
     | stringType
