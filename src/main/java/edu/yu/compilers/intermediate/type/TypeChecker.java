@@ -18,8 +18,6 @@ public class TypeChecker {
         // Example: Handling literals directly.
         if (o instanceof Integer) {
             return Predefined.integerType;
-        } else if (o instanceof Float) {
-            return Predefined.realType;
         } else if (o instanceof Boolean) {
             return Predefined.booleanType;
         } else if (o instanceof String) {
@@ -31,6 +29,25 @@ public class TypeChecker {
 
         return null;
 
+    }
+
+    public static Typespec returnType(String o) {
+
+        if (o == null) {
+            return null;
+        }
+
+        // Example: Handling literals directly.
+        if (o.equals("int")) {
+            return Predefined.integerType;
+        } else if (o.equals("bool")) {
+            return Predefined.booleanType;
+        } else if (o.equals("string")) {
+            return Predefined.stringType;
+        }
+
+
+        return null;
     }
 
 
