@@ -6,7 +6,7 @@ package antlr4;
 
 // Program and routines --------------------
 
-program
+program 
     : hdr=programHeader defs+=globalDefinitions* main=mainMethod defs+=globalDefinitions*
     ;
 
@@ -22,14 +22,14 @@ mainArg
     : name=identifier ':' stringArrType
     ;
 
-globalDefinitions
-    : nameDeclStatement
+globalDefinitions 
+    : nameDeclStatement 
     | nameDeclDefStatement
     ;
 
 // Function Definitions and Declarations ---
 
-funcDefinition
+funcDefinition 
     : proto=funcPrototype body=blockStatement
     ;
 
@@ -77,15 +77,15 @@ nameList
     ;
 
 
-
+    
 
 // Statements ------------------------------
 
-statement
-    : blockStatement
+statement 
+    : blockStatement                  
     | nameDeclStatement
-    | nameDeclDefStatement
-    | assignmentStatement
+    | nameDeclDefStatement             
+    | assignmentStatement 
     | ifStatement
     | forStatement
     | whileStatement
@@ -95,7 +95,7 @@ statement
     | printLineStatement
     ;
 
-blockStatement
+blockStatement 
     : '{' stmts+=statement* '}'
     ;
 
@@ -163,7 +163,8 @@ printArgument
 // Expressions -----------------------------
 
 expression
-    : expression '.' 'length' #StringLengthExpression
+    : expression arrIdxSpecifier #ArrayIndexExpression
+    | expression '.' 'length' #StringLengthExpression
     | expression '.' identifier #RecordFieldExpression
     | expression HIGHER_ARITH_OP expression #HigherArithmeticExpression
     | expression ARITH_OP expression #ArithmeticExpression
@@ -213,7 +214,7 @@ fieldInit
     : field=identifier '=' expr=expression
     ;
 
-literal
+literal 
     : INTEGER   # IntegerLiteral
     | BOOL      # BooleanLiteral
     | STRING    # StringLiteral
@@ -222,12 +223,12 @@ literal
 
 // Types -----------------------------------
 
-type
-    : scalarType
-    | compositeType
+type 
+    : scalarType    
+    | compositeType 
     ;
 
-scalarType
+scalarType 
     : integerType
     | booleanType
     | stringType
@@ -279,10 +280,10 @@ REL_OP          : '<' | '>' | '<=' | '>=' ;
 EQ_OP           : '==' | '!=' ;
 COND_OP         : '&&' | '||' ;
 
+BOOL : 'true' | 'false' ;
 IDENT  : [a-zA-Z_] [a-zA-Z_0-9]* ;
 STRING : '"' ( '\\' ( 'b' | 't' | 'n' | 'f' | 'r' | '"' | '\\' ) | ~('\\' | '"') )* '"' ;
 INTEGER : '-'? [0-9]+ ;
-BOOL : 'true' | 'false' ;
 NULL_VALUE : 'None';
 
 NEWLINE : '\r'? '\n' -> skip ;
