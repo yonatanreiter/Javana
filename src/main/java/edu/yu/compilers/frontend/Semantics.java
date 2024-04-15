@@ -63,41 +63,6 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         crossReferencer.print(symTableStack);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     *
-     * @param ctx
-     */
-    @Override
-    public Object visitConditionalExpression(JavanaParser.ConditionalExpressionContext ctx) {
-        Object lhs = visit(ctx.expression(0)); // Visit left-hand side expression
-        Object rhs = visit(ctx.expression(1)); // Visit right-hand side expression
-        String operator = ctx.COND_OP().getText(); // Get the conditional operator
-
-        // Check that both lhs and rhs are Boolean values
-        if (!(lhs instanceof Boolean && rhs instanceof Boolean)) {
-            error.flag(TYPE_MUST_BE_BOOLEAN, ctx.getStart().getLine(),ctx.getText());
-            return null;
-        }
-
-        boolean lhsBool = (Boolean) lhs;
-        boolean rhsBool = (Boolean) rhs;
-
-        // Perform the logical operation based on the operator
-        if (operator.equals("&&")) {
-            return lhsBool && rhsBool;
-        } else if (operator.equals("||")) {
-            return lhsBool || rhsBool;
-        } else {
-            error.flag(INVALID_OPERATOR, ctx.getStart().getLine(),ctx.getText());
-            return null;
-        }
-    }
-
-
     @Override
     public Object visitProgram(JavanaParser.ProgramContext ctx) {
         for(ParseTree child : ctx.children){
@@ -199,6 +164,8 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         if(params.size() != argsPassed){
             error.flag(ARGUMENT_COUNT_MISMATCH, ctx.getStart().getLine(), ctx.getText());
         }
+
+
         return null;
     }
 
@@ -251,15 +218,28 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
                 routineId.setRoutineParameters((ArrayList<SymTableEntry>) parameterIds);
 
-                for (SymTableEntry paramId : parameterIds) {
-                    paramId.setSlotNumber(symTable.nextSlotNumber());
-                }
+            }
 
+            for (SymTableEntry paramId : parameterIds) {
+                paramId.setSlotNumber(symTable.nextSlotNumber());
             }
 
         }
 
         return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitReturnStatement(JavanaParser.ReturnStatementContext ctx) {
+        return visit(ctx.expression());
     }
 
     @Override
@@ -363,43 +343,6 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     *
-     * @param ctx
-     */
-    @Override
-    public Object visitRelationalExpression(JavanaParser.RelationalExpressionContext ctx) {
-        Object lhs = visit(ctx.expression(0)); // Visit left-hand side expression
-        Object rhs = visit(ctx.expression(1)); // Visit right-hand side expression
-        String operator = ctx.REL_OP().getText(); // Get the relational operator
-
-        if (!(lhs instanceof Integer && rhs instanceof Integer)) {
-            error.flag(TYPE_MISMATCH, ctx.getStart().getLine(),ctx.getText());
-            return null;
-        }
-
-        int lhsInt = (Integer) lhs;
-        int rhsInt = (Integer) rhs;
-
-        switch (operator) {
-            case ">":
-                return lhsInt > rhsInt;
-            case "<":
-                return lhsInt < rhsInt;
-            case ">=":
-                return lhsInt >= rhsInt;
-            case "<=":
-                return lhsInt <= rhsInt;
-            default:
-                error.flag(INVALID_OPERATOR, ctx.getStart().getLine(),ctx.getText());
-                return null;
-        }
-    }
-
 
     /**
      * {@inheritDoc}
@@ -476,31 +419,157 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             if (oneIsInt) {
                 error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.getText());
             }
+            else {
+                error.flag(INVALID_OPERATOR, ctx.getStart().getLine(), ctx.getText());
+            }
             return null;
-        } else if (!oneIsInt) {
-            error.flag(INVALID_OPERATOR, ctx.getStart().getLine(), ctx.getText());
         } else {
             if (operator.equals("+")) {
                 return (int) lhs + (int) rhs;
-            }
-            if (operator.equals("-")) {
+            } else {
                 return (int) lhs - (int) rhs;
             }
-//            else {
-//                return (int) lhs - (int) rhs;
-//            }
         }
-        return null;
     }
 
     /**
+
      * {@inheritDoc}
+
      *
+
      * <p>The default implementation returns the result of calling
+
      * {@link #visitChildren} on {@code ctx}.</p>
+
      *
+
      * @param ctx
+
      */
+
+    @Override
+
+    public Object visitConditionalExpression(JavanaParser.ConditionalExpressionContext ctx) {
+
+        Object lhs = visit(ctx.expression(0)); // Visit left-hand side expression
+
+        Object rhs = visit(ctx.expression(1)); // Visit right-hand side expression
+
+        String operator = ctx.COND_OP().getText(); // Get the conditional operator
+
+
+
+        // Check that both lhs and rhs are Boolean values
+
+        if (!(lhs instanceof Boolean && rhs instanceof Boolean)) {
+
+            error.flag(TYPE_MUST_BE_BOOLEAN, ctx.getStart().getLine(),ctx.getText());
+
+            return null;
+
+        }
+
+
+
+        boolean lhsBool = (Boolean) lhs;
+
+        boolean rhsBool = (Boolean) rhs;
+
+
+
+        // Perform the logical operation based on the operator
+
+        if (operator.equals("&&")) {
+
+            return lhsBool && rhsBool;
+
+        } else if (operator.equals("||")) {
+
+            return lhsBool || rhsBool;
+
+        } else {
+
+            error.flag(INVALID_OPERATOR, ctx.getStart().getLine(),ctx.getText());
+
+            return null;
+
+        }
+
+    }
+
+    /**
+
+     * {@inheritDoc}
+
+     *
+
+     * <p>The default implementation returns the result of calling
+
+     * {@link #visitChildren} on {@code ctx}.</p>
+
+     *
+
+     * @param ctx
+
+     */
+
+    @Override
+
+    public Object visitRelationalExpression(JavanaParser.RelationalExpressionContext ctx) {
+
+        Object lhs = visit(ctx.expression(0)); // Visit left-hand side expression
+
+        Object rhs = visit(ctx.expression(1)); // Visit right-hand side expression
+
+        String operator = ctx.REL_OP().getText(); // Get the relational operator
+
+
+
+        if (!(lhs instanceof Integer && rhs instanceof Integer)) {
+
+            error.flag(TYPE_MISMATCH, ctx.getStart().getLine(),ctx.getText());
+
+            return null;
+
+        }
+
+
+
+        int lhsInt = (Integer) lhs;
+
+        int rhsInt = (Integer) rhs;
+
+
+
+        switch (operator) {
+
+            case ">":
+
+                return lhsInt > rhsInt;
+
+            case "<":
+
+                return lhsInt < rhsInt;
+
+            case ">=":
+
+                return lhsInt >= rhsInt;
+
+            case "<=":
+
+                return lhsInt <= rhsInt;
+
+            default:
+
+                error.flag(INVALID_OPERATOR, ctx.getStart().getLine(),ctx.getText());
+
+                return null;
+
+        }
+
+    }
+
 
 
     /**
@@ -517,6 +586,22 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         return null;
     }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitPrintStatement(JavanaParser.PrintStatementContext ctx) {
+        System.out.printf("Print: %s", visit(ctx.printArgument().children.get(0).getChild(1)));
+
+        return null;
+    }
+
     @Override
     public Object visitHigherArithmeticExpression(JavanaParser.HigherArithmeticExpressionContext ctx) {
         Object lhs = visit(ctx.children.get(0));
