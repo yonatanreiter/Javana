@@ -131,7 +131,9 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     public Object visitTypeAssoc(JavanaParser.TypeAssocContext ctx) {
         for(JavanaParser.IdentifierContext name : ctx.namelst.names) {
             SymTableEntry decl = symTableStack.enterLocal(name.getText(), VARIABLE);
+            Typespec type = TypeChecker.returnType(ctx.children.get(2).getText());
             decl.setType(TypeChecker.returnType(ctx.children.get(2).getText()));
+
         }
 
         return null;
@@ -141,9 +143,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     public Object visitMainMethod(JavanaParser.MainMethodContext ctx){
         JavanaParser.BlockStatementContext blockCtx = ctx.blockStatement();
 
-        symTableStack.push(new SymTable(symTableStack.getCurrentNestingLevel()));
         visit(blockCtx);
-        symTableStack.pop();
         return null;
     }
 
@@ -158,12 +158,20 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     @Override
     public Object visitFunctionCallExpression(JavanaParser.FunctionCallExpressionContext ctx) {
         SymTableEntry function = symTableStack.lookup(ctx.functionCall().identifier().getText());
+
+        if (function.getKind() != FUNCTION) {
+            error.flag(NAME_MUST_BE_FUNCTION, ctx);
+            return null;
+        }
+
         List<SymTableEntry> params = function.getRoutineParameters();
         int argsPassed = ctx.functionCall().exprList() == null? 0 : ctx.functionCall().exprList().expression().size();
 
         if(params.size() != argsPassed){
             error.flag(ARGUMENT_COUNT_MISMATCH, ctx.getStart().getLine(), ctx.getText());
         }
+
+        visit(ctx.functionCall());
 
 
         return null;
@@ -178,10 +186,110 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      * @param ctx
      */
     @Override
+    public Object visitFuncDefinition(JavanaParser.FuncDefinitionContext ctx) {
+        SymTableEntry entry = (SymTableEntry) visitFuncPrototype(ctx.funcPrototype());
+        entry.setExecutable(ctx.blockStatement());
+
+        return null;
+        
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitFunctionCall(JavanaParser.FunctionCallContext ctx) {
+        JavanaParser.ExprListContext exprList = ctx.exprList();
+        String name = ctx.name.getText();
+        symTableStack.push(new SymTable(symTableStack.getCurrentNestingLevel()));
+        SymTableEntry functionId = symTableStack.lookup(name);
+        boolean badName = false;
+        
+
+        if (functionId == null) {
+            error.flag(UNDECLARED_IDENTIFIER, ctx);
+            badName = true;
+        }
+
+        // Bad function name. Do a simple arguments check and then leave.
+        if (badName) {
+            for (JavanaParser.ExpressionContext exprCtx : exprList.expression()) {
+                visit(exprCtx);
+            }
+        }
+
+        // Good function name.
+        else {
+            ArrayList<SymTableEntry> parameters = functionId.getRoutineParameters();
+            checkCallArguments(exprList, parameters);
+            visit((ParseTree) functionId.getExecutable());
+
+        }
+
+        symTableStack.pop();
+
+
+        return null;
+    }
+
+    private void checkCallArguments(JavanaParser.ExprListContext listCtx, ArrayList<SymTableEntry> parameters) {
+        int paramsCount = parameters.size();
+        int argsCount = listCtx != null ? listCtx.expression().size() : 0;
+
+//        if (paramsCount != argsCount) {
+//            error.flag(ARGUMENT_COUNT_MISMATCH, listCtx);
+//            return;
+//        }
+
+        // Check each argument against the corresponding parameter.
+        for (int i = 0; i < paramsCount; i++) {
+            JavanaParser.ExpressionContext exprCtx = listCtx.expression(i);
+            Object returnType = visit(exprCtx);
+
+            SymTableEntry paramId = parameters.get(i);
+            Typespec paramType = paramId.getType();
+            Typespec argType = TypeChecker.returnType(returnType);
+
+            // For a VAR parameter, the argument must be a variable
+            // with the same datatype.
+            if (paramId.getKind() == REFERENCE_PARAMETER) {
+//                if (expressionIsVariable(exprCtx)) {
+//                    if (paramType != argType) {
+//                        error.flag(TYPE_MISMATCH, exprCtx);
+//                    }
+//                } else {
+//                   // error.flag(ARGUMENT_MUST_BE_VARIABLE, exprCtx);
+//                }
+            }
+
+            // For a value parameter, the argument type must be
+            // assignment compatible with the parameter type.
+            else if (!TypeChecker.areAssignmentCompatible(paramType, argType)) {
+                error.flag(TYPE_MISMATCH, exprCtx);
+            }
+        }
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
     public Object visitFuncPrototype(JavanaParser.FuncPrototypeContext ctx) {
         String funcName = ctx.name.getText();
         Typespec type = TypeChecker.returnType(ctx.returnType().children.get(0).getText());
-        List<JavanaParser.FuncArgumentContext> parameters = ctx.funcArgList().args;
+        List<JavanaParser.FuncArgumentContext> parameters = null;
+        if(ctx.funcArgList != null) parameters = ctx.funcArgList().args;
 
         SymTableEntry routineId = symTableStack.lookupLocal(funcName);
 
@@ -225,6 +333,72 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             }
 
         }
+
+        return routineId;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitExpressionStatement(JavanaParser.ExpressionStatementContext ctx) {
+        return super.visitExpressionStatement(ctx);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitIfStatement(JavanaParser.IfStatementContext ctx) {
+        Object expressionResult = visit(ctx.expression());
+
+        if(TypeChecker.returnType(expressionResult) != Predefined.booleanType){
+            error.flag(TYPE_MUST_BE_BOOLEAN, ctx.getStart().getLine(),ctx.expression().getText());
+            return null;
+        }
+
+        if((boolean) expressionResult){
+            visit(ctx.thenStmt);
+        }
+        else {
+            visit(ctx.elseStmt);
+        }
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitWhileStatement(JavanaParser.WhileStatementContext ctx) {
+        Object expressionResult = visit(ctx.expression());
+
+        if(TypeChecker.returnType(expressionResult) != Predefined.booleanType){
+            error.flag(TYPE_MUST_BE_BOOLEAN, ctx.getStart().getLine(),ctx.expression().getText());
+            return null;
+        }
+
+        while((boolean) expressionResult){
+            visit(ctx.blockStatement());
+
+            expressionResult = visit(ctx.expression());
+        }
+
 
         return null;
     }
@@ -315,10 +489,13 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             Object value = visit(ctx.expression());
 
 
+            if(!TypeChecker.areAssignmentCompatible(TypeChecker.returnType(value), variable.getType())){
+                error.flag(TYPE_MISMATCH, ctx.getStart().getLine(), ctx.getText());
 
-            variable = symTableStack.enterLocal(lhs, VARIABLE);
-            variable.setValue(value);
-            variable.setType(TypeChecker.returnType(variable));
+            }else {
+                //variable = symTableStack.enterLocal(lhs, VARIABLE);
+                variable.setValue(value);
+            }
         }
 
 
@@ -336,12 +513,51 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      * @param ctx
      */
     @Override
+    public Object visitNewArrayExpression(JavanaParser.NewArrayExpressionContext ctx) {
+        return visit(ctx.newArray());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitNewArray(JavanaParser.NewArrayContext ctx) {
+        Typespec scalarType = TypeChecker.returnType(ctx.scalarType().children.get(0).getText());
+        Object elementCount = visit(ctx.arrIdxSpecifier().expression());
+
+        if(TypeChecker.returnType(elementCount) != Predefined.integerType){
+            error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.getText());
+            return null;
+        }
+
+        Typespec spec = new Typespec(Typespec.Form.ARRAY);
+        spec.setArrayElementCount((int)elementCount);
+        spec.setArrayElementType(scalarType);
+        spec.setArrayIndexType(Predefined.integerType);
+        return spec;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
     public Object visitNameDeclDefStatement(JavanaParser.NameDeclDefStatementContext ctx) {
         //just visit whatever is actually relevant here
         visit(ctx.children.get(0));
 
         return null;
     }
+
 
 
     /**
