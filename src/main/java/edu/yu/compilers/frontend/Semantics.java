@@ -142,8 +142,11 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     @Override
     public Object visitMainMethod(JavanaParser.MainMethodContext ctx){
         JavanaParser.BlockStatementContext blockCtx = ctx.blockStatement();
+        SymTable mainTable = symTableStack.push();
+        mainTable.setOwner(programId);
 
         visit(blockCtx);
+        symTableStack.pop();
         return null;
     }
 
@@ -206,7 +209,9 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     public Object visitFunctionCall(JavanaParser.FunctionCallContext ctx) {
         JavanaParser.ExprListContext exprList = ctx.exprList();
         String name = ctx.name.getText();
-        symTableStack.push(new SymTable(symTableStack.getCurrentNestingLevel()));
+        SymTable oldTable = symTableStack.pop();
+        SymTable funcTable = symTableStack.push();
+        //funcTable.setOwner();
         SymTableEntry functionId = symTableStack.lookup(name);
         boolean badName = false;
         
@@ -232,6 +237,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         }
 
         symTableStack.pop();
+        symTableStack.push(oldTable);
 
 
         return null;
@@ -333,6 +339,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             }
 
         }
+        symTableStack.pop();
 
         return routineId;
     }
@@ -347,7 +354,47 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitExpressionStatement(JavanaParser.ExpressionStatementContext ctx) {
-        return super.visitExpressionStatement(ctx);
+        visit(ctx.expression());
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitArrayIndexExpression(JavanaParser.ArrayIndexExpressionContext ctx) {
+        String lhs = ctx.expression().getText();
+
+
+        SymTableEntry variable = symTableStack.lookup(lhs);
+
+        if(variable == null){
+            error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(),lhs);
+        }
+
+        else{
+
+                if(!variable.getType().getForm().toString().equals("array")){
+                    error.flag(TYPE_MUST_BE_ARRAY, ctx.getStart().getLine(), ctx.getText());
+                }
+                else{
+
+                    //Grab whatever is inside the brackets
+                    Object inside = visit(ctx.arrIdxSpecifier().children.get(1));
+                    if(TypeChecker.returnType(inside) != Predefined.integerType){
+                        error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.getText());
+                    }
+
+                }
+
+        }
+
+        return null;
     }
 
     /**
@@ -473,6 +520,13 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     public Object visitAssignmentStatement(JavanaParser.AssignmentStatementContext ctx) {
 
         String lhs = ctx.variable().name.getText();
+        boolean isArrayBracket = false;
+
+        if(ctx.variable().children.size() > 1){
+            if(ctx.variable().children.get(1) instanceof JavanaParser.VarArrayIndexModfierContext){
+                isArrayBracket = true;
+            }
+        }
 
         SymTableEntry variable = symTableStack.lookup(lhs);
 
@@ -488,8 +542,26 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
             Object value = visit(ctx.expression());
 
+            if(isArrayBracket){
 
-            if(!TypeChecker.areAssignmentCompatible(TypeChecker.returnType(value), variable.getType())){
+                if(!variable.getType().getForm().toString().equals("array")){
+                    error.flag(TYPE_MUST_BE_ARRAY, ctx.getStart().getLine(), ctx.getText());
+                }
+                else{
+
+                    if(TypeChecker.returnType(value) != variable.getType().getArrayElementType()) {
+                        error.flag(TYPE_MISMATCH, ctx.getStart().getLine(), ctx.getText());
+                    }
+                    else{
+                        //Grab whatever is inside the brackets
+                        Object inside = visit(ctx.variable().varModifier.children.get(0).getChild(1));
+                        if(TypeChecker.returnType(inside) != Predefined.integerType){
+                            error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.getText());
+                        }
+                    }
+                }
+            }
+            else if(!TypeChecker.areAssignmentCompatible(TypeChecker.returnType(value), variable.getType())){
                 error.flag(TYPE_MISMATCH, ctx.getStart().getLine(), ctx.getText());
 
             }else {
@@ -559,6 +631,54 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     }
 
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Object visitVariable(JavanaParser.VariableContext ctx) {
+        String lhs = ctx.name.getText();
+        boolean isArrayBracket = false;
+
+        if(ctx.children.size() > 1){
+            if(ctx.children.get(1) instanceof JavanaParser.VarArrayIndexModfierContext){
+                isArrayBracket = true;
+            }
+        }
+
+        SymTableEntry variable = symTableStack.lookup(lhs);
+
+        if(variable == null){
+            error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(),lhs);
+        }
+
+        else{
+
+
+            if(isArrayBracket){
+
+                if(!variable.getType().getForm().toString().equals("array")){
+                    error.flag(TYPE_MUST_BE_ARRAY, ctx.getStart().getLine(), ctx.getText());
+                }
+                else{
+
+                        //Grab whatever is inside the brackets
+                        Object inside = visit(ctx.varModifier.children.get(0).getChild(1));
+                        if(TypeChecker.returnType(inside) != Predefined.integerType){
+                            error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.getText());
+                        }
+
+                }
+            }
+
+        }
+
+        return null;
+    }
 
     /**
      * {@inheritDoc}
