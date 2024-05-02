@@ -390,6 +390,8 @@ public class Semantics extends JavanaBaseVisitor<Object> {
                         error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.getText());
                     }
 
+                    return variable.getType().getArrayElementType();
+
                 }
 
         }
@@ -414,12 +416,11 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             return null;
         }
 
-        if((boolean) expressionResult){
+        //just semantic checking so visit both
             visit(ctx.thenStmt);
-        }
-        else {
+
+        if(ctx.elseStmt != null)
             visit(ctx.elseStmt);
-        }
         return null;
     }
 
@@ -550,8 +551,9 @@ public class Semantics extends JavanaBaseVisitor<Object> {
                 else{
 
                     if(TypeChecker.returnType(value) != variable.getType().getArrayElementType()) {
-                        error.flag(TYPE_MISMATCH, ctx.getStart().getLine(), ctx.getText());
+                        error.flag(INCOMPATIBLE_ASSIGNMENT, ctx.getStart().getLine(), ctx.getText());
                     }
+
                     else{
                         //Grab whatever is inside the brackets
                         Object inside = visit(ctx.variable().varModifier.children.get(0).getChild(1));
@@ -702,7 +704,13 @@ public class Semantics extends JavanaBaseVisitor<Object> {
                 varId = symTableStack.enterLocal(varName, VARIABLE);
 
                 varId.setValue(varVal);
-                varId.setType(TypeChecker.returnType(varVal));
+                if(varVal instanceof Typespec){
+                    varId.setType((Typespec) varVal);
+                }
+                else{
+                    varId.setType(TypeChecker.returnType(varVal));
+
+                }
             }
 
 
@@ -751,6 +759,11 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         boolean oneIsInt = TypeChecker.returnType(lhs).getIdentifier().getName().equals("integer") || TypeChecker.returnType(rhs).getIdentifier().getName().equals("integer");
 
 
+        //in case one is a typespec
+        if(TypeChecker.oneIsTypeSpecOneIsActualType(lhs, rhs)){
+            return lhs;
+        }
+
         if (TypeChecker.returnType(rhs) != TypeChecker.returnType(lhs)) {
             if (oneIsInt) {
                 error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.getText());
@@ -794,6 +807,10 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         String operator = ctx.COND_OP().getText(); // Get the conditional operator
 
+        //in case one is a typespec
+        if(TypeChecker.oneIsTypeSpecOneIsActualType(lhs, rhs)){
+            return lhs;
+        }
 
 
         // Check that both lhs and rhs are Boolean values
@@ -860,6 +877,10 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         String operator = ctx.REL_OP().getText(); // Get the relational operator
 
+        //in case one is a typespec
+        if(TypeChecker.oneIsTypeSpecOneIsActualType(lhs, rhs)){
+            return lhs;
+        }
 
 
         if (!(lhs instanceof Integer && rhs instanceof Integer)) {
@@ -918,7 +939,8 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitPrintLineStatement(JavanaParser.PrintLineStatementContext ctx) {
-        System.out.printf("Print: %s\n", visit(ctx.printArgument().children.get(0).getChild(1)));
+        visit(ctx.printArgument());
+       // System.out.printf("Print: %s\n", visit(ctx.printArgument().children.get(0).getChild(1)));
 
         return null;
     }
@@ -933,7 +955,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitPrintStatement(JavanaParser.PrintStatementContext ctx) {
-        System.out.printf("Print: %s", visit(ctx.printArgument().children.get(0).getChild(1)));
+       // System.out.printf("Print: %s", visit(ctx.printArgument().children.get(0).getChild(1)));
 
         return null;
     }
