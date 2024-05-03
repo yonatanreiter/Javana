@@ -409,6 +409,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitIfStatement(JavanaParser.IfStatementContext ctx) {
+        symTableStack.push();
         Object expressionResult = visit(ctx.expression());
 
         if(TypeChecker.returnType(expressionResult) != Predefined.booleanType){
@@ -417,10 +418,48 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         }
 
         //just semantic checking so visit both
-            visit(ctx.thenStmt);
 
-        if(ctx.elseStmt != null)
+        symTableStack.push();
+        visit(ctx.thenStmt);
+        symTableStack.pop();
+
+        if(ctx.elseStmt != null) {
+            symTableStack.push();
             visit(ctx.elseStmt);
+            symTableStack.pop();
+        }
+
+        symTableStack.pop();
+        return null;
+    }
+
+    @Override
+    public Object visitForStatement(JavanaParser.ForStatementContext ctx) {
+        symTableStack.push();
+
+        if(ctx.start.getLine() == 14){
+            int i = 2;
+        }
+
+
+        visit(ctx.init);
+        Object obj = visit(((JavanaParser.VariableDefinitionContext) ctx.init).expr);
+
+        if(obj != null && TypeChecker.returnType(obj) != Predefined.integerType){
+            error.flag(TYPE_MUST_BE_INTEGER, ctx.getStart().getLine(), ctx.init.getText());
+
+        }
+
+
+        obj = visit(ctx.condition);
+        if(obj != null && TypeChecker.returnType(obj) != Predefined.booleanType){
+            error.flag(TYPE_MUST_BE_BOOLEAN, ctx.getStart().getLine(), ctx.condition.getText());
+
+        }
+        visit(ctx.updateExpr);
+        visit(ctx.body);
+        symTableStack.pop();
+
         return null;
     }
 
@@ -756,6 +795,18 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         Object lhs = visit(ctx.children.get(0));
         Object rhs = visit(ctx.children.get(2));
         String operator = ctx.children.get(1).getText();
+
+
+
+        if(lhs == null || rhs == null){
+            SymTableEntry l = symTableStack.lookup(ctx.children.get(0).getText());
+            SymTableEntry r = symTableStack.lookup(ctx.children.get(2).getText());
+
+            if(l != null && r != null){
+                return 0;
+            }
+        }
+
         boolean oneIsInt = TypeChecker.returnType(lhs).getIdentifier().getName().equals("integer") || TypeChecker.returnType(rhs).getIdentifier().getName().equals("integer");
 
 
@@ -885,7 +936,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         if (!(lhs instanceof Integer && rhs instanceof Integer)) {
 
-            error.flag(TYPE_MISMATCH, ctx.getStart().getLine(),ctx.getText());
+            error.flag(INCOMPATIBLE_COMPARISON, ctx.getStart().getLine(),ctx.getText());
 
             return null;
 
@@ -955,7 +1006,8 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitPrintStatement(JavanaParser.PrintStatementContext ctx) {
-       // System.out.printf("Print: %s", visit(ctx.printArgument().children.get(0).getChild(1)));
+        visit(ctx.printArgument());
+        System.out.printf("Print: %s", visit(ctx.printArgument().children.get(0).getChild(1)));
 
         return null;
     }
@@ -965,6 +1017,16 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         Object lhs = visit(ctx.children.get(0));
         Object rhs = visit(ctx.children.get(2));
         String operator = ctx.children.get(1).getText();
+
+        if(lhs == null || rhs == null){
+            SymTableEntry l = symTableStack.lookup(ctx.children.get(0).getText());
+            SymTableEntry r = symTableStack.lookup(ctx.children.get(2).getText());
+
+            if(l != null && r != null){
+                return 0;
+            }
+        }
+
         boolean oneIsInt = TypeChecker.returnType(lhs).getIdentifier().getName().equals("integer") || TypeChecker.returnType(rhs).getIdentifier().getName().equals("integer");
 
 
@@ -1002,10 +1064,15 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         Object rhs = visit(ctx.expression(1));
         String operator = ctx.EQ_OP().getText();
 
+
+        if(lhs ==  null || rhs == null){
+                return Predefined.booleanType;
+        }
+
         // Ensure both operands are of the same type
         if (TypeChecker.returnType(lhs) != TypeChecker.returnType(rhs)) {
-            error.flag(TYPE_MISMATCH, ctx.getStart().getLine(), ctx.getText());
-            return null;
+            error.flag(INCOMPATIBLE_COMPARISON, ctx.getStart().getLine(), ctx.getText());
+            return Predefined.booleanType;
         }
 
         // If both are integers, check equality based on the operator
@@ -1053,7 +1120,11 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         String varName = ctx.getText();
         SymTableEntry frame =  symTableStack.lookup(varName);
 
-        if(frame == null)return null;
+        if(frame == null){
+            error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(), ctx.getText());
+
+            return null;
+        }
 
         return frame.getValue();
 
