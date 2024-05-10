@@ -179,8 +179,23 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         SymTable mainTable = symTableStack.push();
         mainTable.setOwner(programId);
 
+        if(ctx.args != null){
+            visit(ctx.mainArg());
+        }
+
         visit(blockCtx);
         symTableStack.pop();
+        return null;
+    }
+
+    @Override
+    public Object visitMainArg(JavanaParser.MainArgContext ctx) {
+        SymTableEntry entry = symTableStack.enterLocal(ctx.name.getText(), PROGRAM_PARAMETER);
+        Typespec type = new Typespec(Typespec.Form.ARRAY);
+        type.setArrayElementType(Predefined.stringType);
+        type.setArrayIndexType(Predefined.integerType);
+        entry.setType(type);
+
         return null;
     }
 
@@ -192,6 +207,8 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         return null;
     }
+
+
 
     private SymTableEntry createRecordType(JavanaParser.RecordDeclContext ctx, String recordTypeName) {
         List<JavanaParser.TypeAssocContext> typeAssocs = ctx.typeAssoc();
@@ -1372,7 +1389,12 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             return null;
         }
 
-        return frame.getValue();
+        try {
+            Object end = frame.getValue();
+            return end;
+        }catch (NullPointerException e){
+            return null;
+        }
 
     }
 
