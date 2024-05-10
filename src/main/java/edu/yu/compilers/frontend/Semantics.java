@@ -973,6 +973,11 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitStringToIntCallExpression(JavanaParser.StringToIntCallExpressionContext ctx) {
+        return 1;
+    }
+
+    @Override
     public Object visitVarRecordFieldModifier(JavanaParser.VarRecordFieldModifierContext ctx) {
         return super.visitVarRecordFieldModifier(ctx);
     }
