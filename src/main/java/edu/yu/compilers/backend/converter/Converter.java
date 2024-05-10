@@ -36,6 +36,7 @@ public class Converter extends JavanaBaseVisitor<Object> {
 
     private boolean programVariables = true;
     private boolean recordFields = false;
+    private String currentRecordName = "";
 
     public String getProgramName() {
         return programName;
@@ -46,7 +47,9 @@ public class Converter extends JavanaBaseVisitor<Object> {
         StringWriter sw = new StringWriter();
         code = new CodeGenerator(new PrintWriter(sw));
 
-        visit(ctx.programHeader());
+        code.emitLine("import java.util.Scanner;\n");
+
+        //visit(ctx.programHeader());
 
         code.emitLine("public class " + ctx.programHeader().name.getText());
         code.emit("{");
@@ -63,6 +66,8 @@ public class Converter extends JavanaBaseVisitor<Object> {
                 code.emitLine();
             }
         }
+
+        code.emitLine("static Scanner scanner = new Scanner(System.in);");
         //emitUnnamedRecordDefinitions(ctx.);
 
         // Main.
@@ -126,6 +131,9 @@ public class Converter extends JavanaBaseVisitor<Object> {
             code.emit(String.format(" = ", names));
 
 
+            if(ctx.expression() instanceof JavanaParser.NewRecordExpressionContext){
+                currentRecordName = names.toString();
+            }
             visit(ctx.expression());
             code.emit("; ");
         }
@@ -230,22 +238,98 @@ public class Converter extends JavanaBaseVisitor<Object> {
 
     @Override
     public Object visitRecordDecl(JavanaParser.RecordDeclContext ctx) {
-        code.emitStart("class ");
+        code.emitStart("static class ");
         visit(ctx.name);
         code.emitStart("{");
         code.indent();
 
         for(JavanaParser.TypeAssocContext typeCtx : ctx.typeAssoc()){
-            code.emitStart("public ");
-            visit(typeCtx);
-            code.emit(";");
-            code.emitLine();
+
+            for(JavanaParser.IdentifierContext id : typeCtx.namelst.names) {
+                code.emitStart("public ");
+                visit(typeCtx.t);
+                code.emit(" ");
+                visit(id);
+                code.emit(";");
+                code.emitLine();
+            }
 
         }
 
         code.dedent();
         code.emitLine("}");
 
+
+        return null;
+    }
+
+    @Override
+    public Object visitReadLineCallExpression(JavanaParser.ReadLineCallExpressionContext ctx) {
+        code.emit("scanner.nextLine()");
+        return null;
+    }
+
+    @Override
+    public Object visitStringToIntCall(JavanaParser.StringToIntCallContext ctx) {
+        code.emit("Integer.parseInt");
+        visit(ctx.expression());
+        code.emit("");
+
+        return null;
+    }
+
+    @Override
+    public Object visitStringArrayCompositeType(JavanaParser.StringArrayCompositeTypeContext ctx) {
+        code.emit("String[]");
+        return null;
+    }
+
+    @Override
+    public Object visitIntegerArrayCompositeType(JavanaParser.IntegerArrayCompositeTypeContext ctx) {
+        code.emit("int[]");
+        return null;
+    }
+
+    @Override
+    public Object visitBooleanArrayCompositeType(JavanaParser.BooleanArrayCompositeTypeContext ctx) {
+        code.emit("boolean[]");
+        return null;
+    }
+
+    @Override
+    public Object visitRecordArrayCompositeType(JavanaParser.RecordArrayCompositeTypeContext ctx) {
+       // code.emit(ctx.recordArrType()."[]");
+        return null;
+    }
+
+    @Override
+    public Object visitNewRecordExpression(JavanaParser.NewRecordExpressionContext ctx) {
+        visit(ctx.newRecord());
+
+        return null;
+    }
+
+    @Override
+    public Object visitNewRecord(JavanaParser.NewRecordContext ctx) {
+        code.emit(" new ");
+        visit(ctx.identifier());
+        code.emit("();");
+
+        code.emitLine();
+
+        boolean isFirst = true;
+
+        for(JavanaParser.FieldInitContext field : ctx.fieldInitList().fieldInit()){
+            if (isFirst){
+                isFirst = false;
+            }
+            else{
+                code.emit(";");
+            }
+            code.emitStart(currentRecordName + ".");
+            visit(field);
+
+        }
 
         return null;
     }
