@@ -3,8 +3,7 @@ package edu.yu.compilers.intermediate.type;
 import antlr4.JavanaParser;
 import edu.yu.compilers.intermediate.symtable.Predefined;
 
-import static edu.yu.compilers.intermediate.type.Typespec.Form.ENUMERATION;
-import static edu.yu.compilers.intermediate.type.Typespec.Form.SCALAR;
+import static edu.yu.compilers.intermediate.type.Typespec.Form.*;
 
 /***
  * This class is responsible for checking the types of expressions and statements.
@@ -50,6 +49,21 @@ public class TypeChecker {
             return Predefined.booleanType;
         } else if (o.equals("string")) {
             return Predefined.stringType;
+        }
+        else if(o.equals("int[]")){
+            Typespec spec = new Typespec(ARRAY);
+            spec.setArrayElementType(Predefined.integerType);
+            return spec;
+        }
+        else if(o.equals("bool[]")){
+            Typespec spec = new Typespec(ARRAY);
+            spec.setArrayElementType(Predefined.booleanType);
+            return spec;
+        }
+        else if(o.equals("string[]")){
+            Typespec spec = new Typespec(ARRAY);
+            spec.setArrayElementType(Predefined.stringType);
+            return spec;
         }
 
 

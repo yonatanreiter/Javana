@@ -25,7 +25,6 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     private final SymTableStack symTableStack;
     private final SemanticErrorHandler error;
     private SymTableEntry programId;
-    Set<String> operators =  Set.of("+", "-", "*", "/", "%");
 
     public Semantics() {
 
@@ -65,9 +64,12 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
     @Override
     public Object visitProgram(JavanaParser.ProgramContext ctx) {
-        for(ParseTree child : ctx.children){
+        visit(ctx.hdr);
+        for(ParseTree child : ctx.defs){
             visit(child);
         }
+
+        visit(ctx.main);
 
         return null;
     }
@@ -114,6 +116,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitVariableDecl(JavanaParser.VariableDeclContext ctx) {
+
         visit(ctx.typeAssoc());
 
         return null;
@@ -129,10 +132,41 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitTypeAssoc(JavanaParser.TypeAssocContext ctx) {
+
+
         for(JavanaParser.IdentifierContext name : ctx.namelst.names) {
+
+            if(symTableStack.lookupLocal(name.getText()) != null){
+                error.flag(REDECLARED_IDENTIFIER, ctx.start.getLine(), ctx.getText());
+                continue;
+            }
+
             SymTableEntry decl = symTableStack.enterLocal(name.getText(), VARIABLE);
-            Typespec type = TypeChecker.returnType(ctx.children.get(2).getText());
-            decl.setType(TypeChecker.returnType(ctx.children.get(2).getText()));
+            String toSearch = ctx.children.get(2).getText();
+            boolean isArr = false;
+
+            if(((JavanaParser.TypeContext) ctx.children.get(2)).children.get(0) instanceof JavanaParser.RecordArrayCompositeTypeContext){
+               toSearch = toSearch.substring(0, toSearch.length()-2);
+               isArr = true;
+            }
+            Typespec type = TypeChecker.returnType(toSearch);
+
+            if(type == null){
+                SymTableEntry entry = symTableStack.lookup(toSearch);
+                if(entry == null){
+                    error.flag(UNDECLARED_IDENTIFIER, ctx.start.getLine(), ctx.getText());
+                    continue;
+                }
+                if(!isArr) {
+                    type = entry.getType();
+                }
+                else{
+                    Typespec typespec = new Typespec(Typespec.Form.ARRAY);
+                    typespec.setArrayElementType(entry.getType());
+                    type = typespec;
+                }
+            }
+            decl.setType(type);
 
         }
 
@@ -150,34 +184,75 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     *
-     * @param ctx
-     */
     @Override
-    public Object visitFunctionCallExpression(JavanaParser.FunctionCallExpressionContext ctx) {
-        SymTableEntry function = symTableStack.lookup(ctx.functionCall().identifier().getText());
-
-        if (function.getKind() != FUNCTION) {
-            error.flag(NAME_MUST_BE_FUNCTION, ctx);
-            return null;
-        }
-
-        List<SymTableEntry> params = function.getRoutineParameters();
-        int argsPassed = ctx.functionCall().exprList() == null? 0 : ctx.functionCall().exprList().expression().size();
-
-        if(params.size() != argsPassed){
-            error.flag(ARGUMENT_COUNT_MISMATCH, ctx.getStart().getLine(), ctx.getText());
-        }
-
-        visit(ctx.functionCall());
-
+    public Object visitRecordDecl(JavanaParser.RecordDeclContext ctx) {
+        // Create an unnamed record type.
+        String recordTypeName = ctx.name.getText();
+        createRecordType(ctx, recordTypeName);
 
         return null;
+    }
+
+    private SymTableEntry createRecordType(JavanaParser.RecordDeclContext ctx, String recordTypeName) {
+        List<JavanaParser.TypeAssocContext> typeAssocs = ctx.typeAssoc();
+        Typespec recordType = new Typespec(Typespec.Form.RECORD);
+
+        SymTableEntry recordTypeId = symTableStack.enterLocal(recordTypeName, TYPE);
+        recordTypeId.setType(recordType);
+        recordType.setIdentifier(recordTypeId);
+
+        String recordTypePath = createRecordTypePath(recordType);
+        recordType.setRecordTypePath(recordTypePath);
+
+        SymTable recordSymTable = createRecordSymTable(typeAssocs, recordTypeId);
+        recordType.setRecordSymTable(recordSymTable);
+
+        return recordTypeId;
+    }
+
+    private SymTable createRecordSymTable(List<JavanaParser.TypeAssocContext> typeAssocs, SymTableEntry ownerId) {
+        SymTable recordSymTable = symTableStack.push();
+
+        recordSymTable.setOwner(ownerId);
+
+        for(JavanaParser.TypeAssocContext assoc : typeAssocs){
+            visit(assoc);
+        }
+
+        recordSymTable.resetVariables(RECORD_FIELD);
+        symTableStack.pop();
+
+        return recordSymTable;
+    }
+
+    private String createRecordTypePath(Typespec recordType) {
+        SymTableEntry recordId = recordType.getIdentifier();
+        SymTableEntry parentId = recordId.getSymTable().getOwner();
+        String path = recordId.getName();
+
+        while ((parentId.getKind() == TYPE) && (parentId.getType().getForm() == Typespec.Form.RECORD)) {
+            path = parentId.getName() + "$" + path;
+            parentId = parentId.getSymTable().getOwner();
+        }
+
+        path = parentId.getName() + "$" + path;
+        return path;
+    }
+
+    @Override
+    public Object visitRecordFieldExpression(JavanaParser.RecordFieldExpressionContext ctx) {
+        SymTableEntry record = symTableStack.lookup(ctx.expression().getText());
+        if(record == null){
+            error.flag(UNDECLARED_IDENTIFIER, ctx.start.getLine(), ctx.getText());
+        }
+
+        record  = record.getType().getRecordSymTable().lookup(ctx.identifier().getText());
+
+        if(record == null){
+            error.flag(UNDECLARED_IDENTIFIER, ctx.start.getLine(), ctx.getText());
+        }
+
+        return record;
     }
 
     /**
@@ -206,11 +281,51 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      * @param ctx
      */
     @Override
+    public Object visitFunctionCallExpression(JavanaParser.FunctionCallExpressionContext ctx) {
+        SymTableEntry function = symTableStack.lookup(ctx.functionCall().identifier().getText());
+
+        if(function == null){
+            error.flag(UNDECLARED_IDENTIFIER, ctx.start.getLine(), ctx.getText());
+            return null;
+        }
+
+        if (function.getKind() != FUNCTION) {
+            error.flag(NAME_MUST_BE_FUNCTION, ctx);
+            return null;
+        }
+
+        List<SymTableEntry> params = function.getRoutineParameters();
+        int argsPassed = ctx.functionCall().exprList() == null? 0 : ctx.functionCall().exprList().expression().size();
+
+        if(params.size() != argsPassed){
+            error.flag(ARGUMENT_COUNT_MISMATCH, ctx.getStart().getLine(), ctx.getText());
+        }
+
+        SymTable oldTable = symTableStack.pop();
+        symTableStack.push(function.getRoutineSymTable());
+
+        visit(ctx.functionCall());
+
+        symTableStack.pop();
+        symTableStack.push(oldTable);
+
+        return null;
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
     public Object visitFunctionCall(JavanaParser.FunctionCallContext ctx) {
         JavanaParser.ExprListContext exprList = ctx.exprList();
         String name = ctx.name.getText();
-        SymTable oldTable = symTableStack.pop();
-        SymTable funcTable = symTableStack.push();
+
         //funcTable.setOwner();
         SymTableEntry functionId = symTableStack.lookup(name);
         boolean badName = false;
@@ -236,14 +351,12 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         }
 
-        symTableStack.pop();
-        symTableStack.push(oldTable);
-
 
         return null;
     }
 
     private void checkCallArguments(JavanaParser.ExprListContext listCtx, ArrayList<SymTableEntry> parameters) {
+        SymTable top = symTableStack.get(symTableStack.getCurrentNestingLevel());
         int paramsCount = parameters.size();
         int argsCount = listCtx != null ? listCtx.expression().size() : 0;
 
@@ -277,6 +390,9 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             // assignment compatible with the parameter type.
             else if (!TypeChecker.areAssignmentCompatible(paramType, argType)) {
                 error.flag(TYPE_MISMATCH, exprCtx);
+            }
+            else{
+                paramId.setValue(returnType);
             }
         }
     }
@@ -566,9 +682,22 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             if(ctx.variable().children.get(1) instanceof JavanaParser.VarArrayIndexModfierContext){
                 isArrayBracket = true;
             }
+            else if(ctx.variable().children.size() > 2 && ctx.variable().children.get(2) instanceof JavanaParser.VarArrayIndexModfierContext){
+                isArrayBracket = true;
+            }
         }
 
         SymTableEntry variable = symTableStack.lookup(lhs);
+        if(ctx.variable().children.size() > 1 && ctx.variable().children.get(1) instanceof JavanaParser.VarRecordFieldModifierContext){
+            String recordFieldId = ((JavanaParser.VarRecordFieldModifierContext) ((JavanaParser.VariableContext) ctx.children.get(0)).children.get(1)).identifier().getText();
+            Object val = variable.getValue();
+            if(val == null){
+                variable.setValue(variable.getType());
+                val = variable.getValue();
+            }
+            variable =  ((Typespec) val).getRecordSymTable().get(recordFieldId);
+
+        }
 
         if(variable == null){
             error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(),lhs);
@@ -590,7 +719,14 @@ public class Semantics extends JavanaBaseVisitor<Object> {
                 else{
 
                     if(TypeChecker.returnType(value) != variable.getType().getArrayElementType()) {
-                        error.flag(INCOMPATIBLE_ASSIGNMENT, ctx.getStart().getLine(), ctx.getText());
+
+                        if(((Typespec) value).getForm() == variable.getType().getArrayElementType().getForm()){
+                            dealWithRecordInArray(variable, value, ctx);
+                        }
+                        else {
+
+                            error.flag(INCOMPATIBLE_ASSIGNMENT, ctx.getStart().getLine(), ctx.getText());
+                        }
                     }
 
                     else{
@@ -617,6 +753,17 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+    private void dealWithRecordInArray(SymTableEntry variable, Object value, JavanaParser.AssignmentStatementContext ctx) {
+        Typespec valueType = (Typespec) value;
+
+        if(!(variable.getType().getForm() == variable.getType().getForm())
+        || !(Objects.equals(variable.getType().getArrayElementType().getIdentifier().getName(), ((Typespec) value).getIdentifier().getName()))){
+
+            error.flag(TYPE_MISMATCH, ctx.getStart().getLine(), ctx.getText());
+        }
+
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -640,7 +787,19 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitNewArray(JavanaParser.NewArrayContext ctx) {
-        Typespec scalarType = TypeChecker.returnType(ctx.scalarType().children.get(0).getText());
+        Typespec type = null;
+        if(ctx.scalarType() != null){
+            type = TypeChecker.returnType(ctx.scalarType().children.get(0).getText());
+        }
+        else{
+            SymTableEntry entry = symTableStack.lookup(ctx.identifier().children.get(0).getText());
+            if(entry == null){
+                error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(), ctx.getText());
+                return null;
+            }
+
+            type = entry.getType();
+        }
         Object elementCount = visit(ctx.arrIdxSpecifier().expression());
 
         if(TypeChecker.returnType(elementCount) != Predefined.integerType){
@@ -650,7 +809,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         Typespec spec = new Typespec(Typespec.Form.ARRAY);
         spec.setArrayElementCount((int)elementCount);
-        spec.setArrayElementType(scalarType);
+        spec.setArrayElementType(type);
         spec.setArrayIndexType(Predefined.integerType);
         return spec;
     }
@@ -721,6 +880,11 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+    @Override
+    public Object visitParenthesizedExpression(JavanaParser.ParenthesizedExpressionContext ctx) {
+        return visit(ctx.expression());
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -731,35 +895,75 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitVariableDefinition(JavanaParser.VariableDefinitionContext ctx) {
-        String varName = ctx.nameList().identifier().get(0).getText();
 
-        SymTableEntry varId = symTableStack.lookupLocal(varName);
+        for(ParseTree tree : ctx.nameList().names) {
+            String varName = tree.getChild(0).getText();
 
-        if (varId == null) {
+            SymTableEntry varId = symTableStack.lookupLocal(varName);
 
-            Object varVal = visit(ctx.expression());
+            if (varId == null) {
 
-            if(varVal != null) {
+
+                Object varVal = visit(ctx.expression());
+
+                if (varVal != null) {
+                    varId = symTableStack.enterLocal(varName, VARIABLE);
+
+                    varId.setValue(varVal);
+                    if (varVal instanceof Typespec) {
+                        varId.setType((Typespec) varVal);
+
+                        //if its a record
+                        if (((Typespec) varVal).baseType().getForm().name().equals("RECORD")) {
+                            //go through the fields
+                            for (JavanaParser.FieldInitContext field : ((JavanaParser.NewRecordContext) ctx.expression().children.get(0)).init.fieldInit()) {
+
+                                //collect the name of the record
+                                String recordType = ctx.expression().children.get(0).getChild(1).getText();
+                                SymTableEntry recordEntry = symTableStack.lookup(recordType);
+
+                                //if record doesn't exist
+                                if (recordEntry == null) {
+                                    error.flag(UNDECLARED_IDENTIFIER, field.getStart().getLine(), varName);
+                                    return null;
+                                }
+
+                                //get the type of the field and whats being assigned to it
+                                Typespec valueType = TypeChecker.returnType(visit(field.expression()));
+                                Typespec varType = recordEntry.getType().getRecordSymTable().lookup((String) visit(field.identifier())).getType();
+                                if (!valueType.equals(varType)) {
+
+                                    if (varType.baseType().getForm().equals(Typespec.Form.ARRAY)) {
+                                        if (!(
+                                                varType.baseType().getForm() == valueType.baseType().getForm()
+                                                        && varType.getArrayElementType().getIdentifier().equals(valueType.getArrayElementType().getIdentifier()))
+                                        ) {
+                                            error.flag(ILLEGAL_ASSIGNMENT, field.getStart().getLine(), field.getText());
+                                        }
+                                    } else if (!(varType.getForm() == valueType.getForm() && varType.getIdentifier() == valueType.getIdentifier())) {
+                                        error.flag(ILLEGAL_ASSIGNMENT, field.getStart().getLine(), field.getText());
+                                    }
+
+
+                                }
+
+                            }
+                        }
+
+                    } else {
+                        varId.setType(TypeChecker.returnType(varVal));
+
+                    }
+                }
+
+
+            } else {
+                error.flag(REDECLARED_IDENTIFIER, ctx.getStart().getLine(), varName);
+
                 varId = symTableStack.enterLocal(varName, VARIABLE);
-
-                varId.setValue(varVal);
-                if(varVal instanceof Typespec){
-                    varId.setType((Typespec) varVal);
-                }
-                else{
-                    varId.setType(TypeChecker.returnType(varVal));
-
-                }
-            }
-
-
-        }
-        else {
-            error.flag(REDECLARED_IDENTIFIER, ctx.getStart().getLine(), varName);
-
-            varId = symTableStack.enterLocal(varName, VARIABLE);
 //            varId.setValue(0);
 //            varId.setType(Predefined.undefinedType);
+            }
         }
 
 
@@ -768,6 +972,43 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+    @Override
+    public Object visitVarRecordFieldModifier(JavanaParser.VarRecordFieldModifierContext ctx) {
+        return super.visitVarRecordFieldModifier(ctx);
+    }
+
+    @Override
+    public Object visitNewRecordExpression(JavanaParser.NewRecordExpressionContext ctx) {
+        SymTable table = symTableStack.push();
+
+        String recordId = ((JavanaParser.NewRecordContext) ctx.children.get(0)).identifier().getText();
+        if(symTableStack.lookup(recordId) == null){
+            error.flag(REDECLARED_IDENTIFIER, ctx.getStart().getLine(), ctx.getText());
+            return null;
+        }
+
+        Typespec type = new Typespec(Typespec.Form.RECORD);
+        JavanaParser.FieldInitListContext list = ((JavanaParser.NewRecordContext) ctx.children.get(0)).fieldInitList();
+        for(JavanaParser.FieldInitContext field  : list.fieldInit()){
+            String id = (String) visit(field.identifier());
+            Object obj = visit(field.expression());
+            if(table.lookup(id) != null){
+                error.flag(REDECLARED_IDENTIFIER, field.getStart().getLine(), field.getText());
+            }
+            else{
+                table.enter(id, RECORD_FIELD);
+                table.get(id).setType(TypeChecker.returnType(obj));
+                table.get(id).setValue(obj);
+            }
+
+        }
+
+        type.setIdentifier(symTableStack.lookup(recordId));
+        type.setRecordSymTable(table);
+
+        symTableStack.pop();
+        return type;
+    }
 
     /**
      * {@inheritDoc}
@@ -1007,7 +1248,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     @Override
     public Object visitPrintStatement(JavanaParser.PrintStatementContext ctx) {
         visit(ctx.printArgument());
-        System.out.printf("Print: %s", visit(ctx.printArgument().children.get(0).getChild(1)));
+        //System.out.printf("Print: %s", visit(ctx.printArgument().children.get(0).getChild(1)));
 
         return null;
     }
