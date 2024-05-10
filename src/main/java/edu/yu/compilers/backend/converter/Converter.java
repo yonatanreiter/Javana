@@ -270,6 +270,13 @@ public class Converter extends JavanaBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitReadCharCallExpression(JavanaParser.ReadCharCallExpressionContext ctx) {
+        code.emit("scanner.next().charAt(0) + \"\"");
+
+        return null;
+    }
+
+    @Override
     public Object visitStringToIntCall(JavanaParser.StringToIntCallContext ctx) {
         code.emit("Integer.parseInt");
         visit(ctx.expression());
