@@ -175,6 +175,7 @@ expression
     | '(' expression ')' #ParenthesizedExpression
     | readCharCall #ReadCharCallExpression
     | readLineCall #ReadLineCallExpression
+    | stringToIntCall #StringToIntCallExpression
     | functionCall #FunctionCallExpression
     | identifier #IdentifierExpression
     | literal #LiteralExpression
@@ -192,6 +193,10 @@ readCharCall
 
 readLineCall
     : 'readln' '(' ')'
+    ;
+
+stringToIntCall
+    : 'stringToInt' arg=expression?
     ;
 
 functionCall
