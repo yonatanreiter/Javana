@@ -1165,6 +1165,22 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
     }
 
+    @Override
+    public Object visitStringLengthExpression(JavanaParser.StringLengthExpressionContext ctx) {
+        return 0;
+    }
+
+
+    @Override
+    public Object visitReadCharCall(JavanaParser.ReadCharCallContext ctx) {
+        return "a";
+    }
+
+    @Override
+    public Object visitReadLineCall(JavanaParser.ReadLineCallContext ctx) {
+        return "a";
+    }
+
     /**
 
      * {@inheritDoc}
@@ -1397,6 +1413,8 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         }
 
     }
+
+
 
     /**
      * {@inheritDoc}
