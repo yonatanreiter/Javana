@@ -321,12 +321,12 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         SymTable oldTable = symTableStack.pop();
         symTableStack.push(function.getRoutineSymTable());
 
-        visit(ctx.functionCall());
+        Object result = visit(ctx.functionCall());
 
         symTableStack.pop();
         symTableStack.push(oldTable);
 
-        return null;
+        return function.getType();
     }
 
 
@@ -491,6 +491,8 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+
+
     /**
      * {@inheritDoc}
      *
@@ -633,7 +635,9 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitReturnStatement(JavanaParser.ReturnStatementContext ctx) {
-        return visit(ctx.expression());
+        if(ctx.expression() != null) {
+            return visit(ctx.expression());
+        }else return null;
     }
 
     @Override
@@ -1166,6 +1170,12 @@ public class Semantics extends JavanaBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitNotExpression(JavanaParser.NotExpressionContext ctx) {
+        Object a  = visit(ctx.expression());
+        return a;
+    }
+
+    @Override
     public Object visitStringLengthExpression(JavanaParser.StringLengthExpressionContext ctx) {
         return 0;
     }
@@ -1399,6 +1409,10 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         String varName = ctx.getText();
         SymTableEntry frame =  symTableStack.lookup(varName);
 
+        if(varName.equals("secretWord")){
+            int a = 1;
+        }
+
         if(frame == null){
             error.flag(UNDECLARED_IDENTIFIER, ctx.getStart().getLine(), ctx.getText());
 
@@ -1407,9 +1421,17 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         try {
             Object end = frame.getValue();
+            if(end == null){
+                return frame.getType();
+            }
             return end;
         }catch (NullPointerException e){
-            return null;
+            try {
+                Object end = frame.getType();
+                return end;
+            }catch (NullPointerException f){
+                return null;
+            }
         }
 
     }
