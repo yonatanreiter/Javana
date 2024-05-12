@@ -22,7 +22,8 @@ import static edu.yu.compilers.intermediate.symtable.SymTableEntry.Kind.*;
  */
 public class Semantics extends JavanaBaseVisitor<Object> {
 
-    private final SymTableStack symTableStack;
+    private SymTableStack symTableStack;
+    private SymTableStack tempTableStack  = new SymTableStack();
     private final SemanticErrorHandler error;
     private SymTableEntry programId;
 
@@ -68,6 +69,16 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         for(ParseTree child : ctx.defs){
             visit(child);
         }
+
+
+        for(int i = 0; i <= symTableStack.getCurrentNestingLevel(); i++){
+            try{
+                tempTableStack.set(i,symTableStack.get(i));
+            }catch (Exception e){
+                tempTableStack.push(symTableStack.get(i));
+            }
+        }
+
 
         visit(ctx.main);
 
@@ -318,13 +329,14 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             error.flag(ARGUMENT_COUNT_MISMATCH, ctx.getStart().getLine(), ctx.getText());
         }
 
-        SymTable oldTable = symTableStack.pop();
-        symTableStack.push(function.getRoutineSymTable());
+//        SymTableStack hodl = symTableStack;
+//        symTableStack = tempTableStack;
+//        symTableStack.push(function.getRoutineSymTable());
 
         Object result = visit(ctx.functionCall());
 
-        symTableStack.pop();
-        symTableStack.push(oldTable);
+//        symTableStack.pop();
+//        symTableStack = hodl;
 
         return function.getType();
     }
@@ -364,12 +376,32 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         else {
             ArrayList<SymTableEntry> parameters = functionId.getRoutineParameters();
             checkCallArguments(exprList, parameters);
+
+            updateTempStack();
+            SymTableStack hodl = symTableStack;
+            symTableStack = tempTableStack;
+            symTableStack.push(functionId.getRoutineSymTable());
+
             visit((ParseTree) functionId.getExecutable());
+
+            symTableStack.pop();
+            symTableStack = hodl;
+            updateRealStack();
 
         }
 
 
         return null;
+    }
+
+    private void updateTempStack(){
+        tempTableStack.set(0, symTableStack.get(0));
+        tempTableStack.set(1, symTableStack.get(1));
+    }
+
+    private void updateRealStack(){
+        symTableStack.set(0, tempTableStack.get(0));
+        symTableStack.set(1, tempTableStack.get(1));
     }
 
     private void checkCallArguments(JavanaParser.ExprListContext listCtx, ArrayList<SymTableEntry> parameters) {
@@ -608,6 +640,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
      */
     @Override
     public Object visitWhileStatement(JavanaParser.WhileStatementContext ctx) {
+        symTableStack.push();
         Object expressionResult = visit(ctx.expression());
 
         if(TypeChecker.returnType(expressionResult) != Predefined.booleanType){
@@ -615,13 +648,14 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             return null;
         }
 
-        while((boolean) expressionResult){
-            visit(ctx.blockStatement());
 
-            expressionResult = visit(ctx.expression());
-        }
+        visit(ctx.blockStatement());
+
+        expressionResult = visit(ctx.expression());
 
 
+
+        symTableStack.pop();
         return null;
     }
 
@@ -1092,11 +1126,36 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             return null;
         } else {
             if (operator.equals("+")) {
-                return (int) lhs + (int) rhs;
+                try{
+                    return (int) lhs + (int) rhs;
+                }catch (Exception e){
+                    System.out.println("Error at " +  ctx.getStart().getLine());
+                    throw e;
+                }
             } else {
-                return (int) lhs - (int) rhs;
+                try{
+                    return (int) lhs - (int) rhs;
+                }catch (Exception e){
+                    System.out.println("Error at " +  ctx.getStart().getLine());
+                    throw e;
+                }
             }
         }
+    }
+
+    @Override
+    public Object visitConcatenateStringsExpression(JavanaParser.ConcatenateStringsExpressionContext ctx) {
+        return "a";
+    }
+
+    @Override
+    public Object visitConcatenateStringsCall(JavanaParser.ConcatenateStringsCallContext ctx) {
+        return "a";
+    }
+
+    @Override
+    public Object visitStringCharToValCall(JavanaParser.StringCharToValCallContext ctx) {
+        return 0;
     }
 
     /**
