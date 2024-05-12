@@ -191,9 +191,16 @@ public class Converter extends JavanaBaseVisitor<Object> {
         return null;
     }
 
-
-
-
+    @Override
+    public Object visitPrintfCall(JavanaParser.PrintfCallContext ctx) {
+        code.emitStart("System.out.printf(");
+        code.emit(ctx.formatString.getText().trim());
+        for(ParseTree tree : ctx.argsList().children){
+            visit(tree);
+        }
+        code.emit(");");
+        return null;
+    }
 
     @Override
     public Object visitRelationalExpression(JavanaParser.RelationalExpressionContext ctx) {
@@ -429,8 +436,30 @@ public class Converter extends JavanaBaseVisitor<Object> {
     @Override
     public Object visitReturnStatement(JavanaParser.ReturnStatementContext ctx) {
         code.emit("return ");
-        visit(ctx.expression());
+        if(ctx.expression() != null)visit(ctx.expression());
         code.emit(";");
+
+        return null;
+    }
+
+    @Override
+    public Object visitStringCharToValCall(JavanaParser.StringCharToValCallContext ctx) {
+        visit(ctx.expression());
+        return null;
+    }
+
+    @Override
+    public Object visitConcatenateStringsExpression(JavanaParser.ConcatenateStringsExpressionContext ctx) {
+        visit(ctx.concatenateStringsCall());
+
+        return null;
+    }
+
+    @Override
+    public Object visitConcatenateStringsCall(JavanaParser.ConcatenateStringsCallContext ctx) {
+        visit(ctx.first);
+        code.emit(" + ");
+        visit(ctx.second);
 
         return null;
     }
