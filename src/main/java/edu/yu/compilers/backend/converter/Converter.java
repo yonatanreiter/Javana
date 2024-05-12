@@ -465,6 +465,12 @@ public class Converter extends JavanaBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitContinueStatement(JavanaParser.ContinueStatementContext ctx) {
+        code.emit("continue;");
+        return null;
+    }
+
+    @Override
     public Object visitFuncDefinition(JavanaParser.FuncDefinitionContext ctx) {
         visit(ctx.proto);
         code.emitLine("{");
