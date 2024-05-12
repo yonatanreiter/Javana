@@ -209,6 +209,15 @@ public class TypeChecker {
             // real := integer
         else if (isReal(targetType) && isInteger(valueType)) compatible = true;
 
+
+        try {
+            if (valueType.baseType().getForm() == targetType.baseType().getForm()) {
+                if (valueType.getArrayElementType() == targetType.getArrayElementType()) return true;
+            }
+        }catch (Exception e){
+            //compatible = false;
+        }
+
         return compatible;
     }
 
