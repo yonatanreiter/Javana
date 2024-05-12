@@ -91,8 +91,11 @@ statement
     | whileStatement
     | expressionStatement
     | returnStatement
+    | continueStatement
+    | breakStatement
     | printStatement
     | printLineStatement
+    | printfCall
     ;
 
 blockStatement 
@@ -147,6 +150,15 @@ returnStatement
     : 'return' expr=expression?
     ;
 
+continueStatement
+    : 'continue'
+    ;
+
+
+breakStatement
+    : 'break'
+    ;
+
 printStatement
     : 'print' arg=printArgument
     ;
@@ -160,10 +172,21 @@ printArgument
     | '(' exprList ')'  # FormattedPrint
     ;
 
+printfCall
+    : 'printf' '(' formatString=expression argsList ')'
+    ;
+
+argsList
+    : (',' expression)*  #printFArgsList
+    ;
+
+
 // Expressions -----------------------------
 
 expression
-    : expression '.' 'charAt' '(' expression ')' #CharAtExpression
+    :  stringCharToValCall #CharToValExpression
+    | concatenateStringsCall #ConcatenateStringsExpression
+    | expression '.' 'charAt' '(' expression ')' #CharAtExpression
     | expression arrIdxSpecifier #ArrayIndexExpression
     | expression '.' 'length' #StringLengthExpression
     | expression '.' identifier #RecordFieldExpression
@@ -176,8 +199,8 @@ expression
     | '(' expression ')' #ParenthesizedExpression
     | readCharCall #ReadCharCallExpression
     | readLineCall #ReadLineCallExpression
-    | stringToIntCall #StringToIntCallExpression
     | functionCall #FunctionCallExpression
+    | stringToIntCall #StringToIntCallExpression
     | identifier #IdentifierExpression
     | literal #LiteralExpression
     | newArray #NewArrayExpression
@@ -197,7 +220,16 @@ readLineCall
     ;
 
 stringToIntCall
-    : 'stringToInt' arg=expression?
+    : 'stringToInt' '(' expression ')'
+    ;
+
+stringCharToValCall
+    : 'stringCharToVal' '(' expression ')'
+    ;
+
+
+concatenateStringsCall
+    : 'concat' '(' first=expression ',' second=expression ')'
     ;
 
 
