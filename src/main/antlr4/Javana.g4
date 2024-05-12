@@ -163,7 +163,8 @@ printArgument
 // Expressions -----------------------------
 
 expression
-    : expression arrIdxSpecifier #ArrayIndexExpression
+    : expression '.' 'charAt' '(' expression ')' #CharAtExpression
+    | expression arrIdxSpecifier #ArrayIndexExpression
     | expression '.' 'length' #StringLengthExpression
     | expression '.' identifier #RecordFieldExpression
     | expression HIGHER_ARITH_OP expression #HigherArithmeticExpression
@@ -198,6 +199,7 @@ readLineCall
 stringToIntCall
     : 'stringToInt' arg=expression?
     ;
+
 
 functionCall
     : name=identifier '(' args=exprList? ')'
