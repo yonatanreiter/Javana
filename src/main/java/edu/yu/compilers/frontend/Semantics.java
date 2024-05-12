@@ -1278,7 +1278,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
 
         //in case one is a typespec
         if(TypeChecker.oneIsTypeSpecOneIsActualType(lhs, rhs)){
-            return lhs;
+            return Predefined.booleanType;
         }
 
 
