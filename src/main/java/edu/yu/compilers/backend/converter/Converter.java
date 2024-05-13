@@ -287,9 +287,27 @@ public class Converter extends JavanaBaseVisitor<Object> {
 
     @Override
     public Object visitStringToIntCall(JavanaParser.StringToIntCallContext ctx) {
-        code.emit("Integer.parseInt");
+        code.emit("Integer.parseInt(");
         visit(ctx.expression());
-        code.emit("");
+        code.emit(")");
+
+        return null;
+    }
+
+    @Override
+    public Object visitArrayLength(JavanaParser.ArrayLengthContext ctx) {
+        visit(ctx.expression());
+        code.emit(".length");
+
+        return null;
+    }
+
+    @Override
+    public Object visitStringEquals(JavanaParser.StringEqualsContext ctx) {
+        visit(ctx.first);
+        code.emit(".equals(");
+        visit(ctx.second);
+        code.emit(")");
 
         return null;
     }
@@ -444,8 +462,27 @@ public class Converter extends JavanaBaseVisitor<Object> {
 
     @Override
     public Object visitStringCharToValCall(JavanaParser.StringCharToValCallContext ctx) {
+        //code.emit("(char)");
         visit(ctx.expression());
+        code.emit(".charAt(0)");
         return null;
+    }
+
+    @Override
+    public Object visitSubstringCall(JavanaParser.SubstringCallContext ctx) {
+        visit(ctx.first);
+        code.emit(".substring(");
+        visit(ctx.second);
+        code.emit(", ");
+        visit(ctx.third);
+        code.emit(")");
+
+        return null;
+    }
+
+    @Override
+    public Object visitSubstringExpression(JavanaParser.SubstringExpressionContext ctx) {
+        return visit(ctx.substringCall());
     }
 
     @Override
@@ -465,8 +502,22 @@ public class Converter extends JavanaBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitStringLengthExpression(JavanaParser.StringLengthExpressionContext ctx) {
+        visit(ctx.expression());
+        code.emit(".length()");
+
+        return null;
+    }
+
+    @Override
     public Object visitContinueStatement(JavanaParser.ContinueStatementContext ctx) {
         code.emit("continue;");
+        return null;
+    }
+
+    @Override
+    public Object visitBreakStatement(JavanaParser.BreakStatementContext ctx) {
+        code.emit("break;");
         return null;
     }
 
