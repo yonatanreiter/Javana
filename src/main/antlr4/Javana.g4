@@ -186,6 +186,9 @@ argsList
 expression
     :  stringCharToValCall #CharToValExpression
     | concatenateStringsCall #ConcatenateStringsExpression
+    | substringCall #SubstringExpression
+    | arrayLength #ArrayLengthExpression
+    | stringEquals #StringEqualsExpression
     | expression '.' 'charAt' '(' expression ')' #CharAtExpression
     | expression arrIdxSpecifier #ArrayIndexExpression
     | expression '.' 'length' #StringLengthExpression
@@ -232,6 +235,17 @@ concatenateStringsCall
     : 'concat' '(' first=expression ',' second=expression ')'
     ;
 
+substringCall
+    : 'substring' '(' first=expression ',' second=expression ',' third=expression ')'
+    ;
+
+arrayLength
+    : 'len' '(' paramArray=expression ')'
+    ;
+
+stringEquals
+    : 'stringEquals' '(' first=expression ',' second=expression ')'
+    ;
 
 functionCall
     : name=identifier '(' args=exprList? ')'
