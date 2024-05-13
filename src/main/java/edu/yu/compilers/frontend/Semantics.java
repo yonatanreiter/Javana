@@ -377,6 +377,10 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             ArrayList<SymTableEntry> parameters = functionId.getRoutineParameters();
             checkCallArguments(exprList, parameters);
 
+            if(ctx.getStart().getLine() == 83){
+                int dd = 2;
+            }
+
             updateTempStack();
             SymTableStack hodl = symTableStack;
             symTableStack = tempTableStack;
@@ -716,6 +720,7 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         }
         return null;
     }
+
 
 
 
@@ -1398,6 +1403,21 @@ public class Semantics extends JavanaBaseVisitor<Object> {
         return null;
     }
 
+    @Override
+    public Object visitStringEquals(JavanaParser.StringEqualsContext ctx) {
+        return Predefined.booleanType;
+    }
+
+    @Override
+    public Object visitArrayLengthExpression(JavanaParser.ArrayLengthExpressionContext ctx) {
+        return visit(ctx.arrayLength());
+    }
+
+    @Override
+    public Object visitArrayLength(JavanaParser.ArrayLengthContext ctx) {
+        return Predefined.integerType;
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -1422,37 +1442,45 @@ public class Semantics extends JavanaBaseVisitor<Object> {
             error.flag(INCOMPATIBLE_COMPARISON, ctx.getStart().getLine(), ctx.getText());
             return Predefined.booleanType;
         }
-
-        // If both are integers, check equality based on the operator
-        if (lhs instanceof Integer && rhs instanceof Integer) {
-            if (operator.equals("==")) {
-                return lhs.equals(rhs); // or (int)lhs == (int)rhs
-            } else {
-                return !lhs.equals(rhs); // or (int)lhs != (int)rhs
-            }
+        else{
+            return Predefined.booleanType;
         }
 
-        // If both are booleans, check equality based on the operator
-        if (lhs instanceof Boolean && rhs instanceof Boolean) {
-            if (operator.equals("==")) {
-                return lhs.equals(rhs); // or (boolean)lhs == (boolean)rhs
-            } else {
-                return !lhs.equals(rhs); // or (boolean)lhs != (boolean)rhs
-            }
-        }
-
-        // If both are strings, check equality using .equals()
-        if (lhs instanceof String && rhs instanceof String) {
-            if (operator.equals("==")) {
-                return lhs.equals(rhs);
-            } else {
-                return !lhs.equals(rhs);
-            }
-        }
+//        // If both are integers, check equality based on the operator
+//        if (lhs instanceof Integer && rhs instanceof Integer) {
+//            if (operator.equals("==")) {
+//                return lhs.equals(rhs); // or (int)lhs == (int)rhs
+//            } else {
+//                return !lhs.equals(rhs); // or (int)lhs != (int)rhs
+//            }
+//        }
+//
+//        // If both are booleans, check equality based on the operator
+//        if (lhs instanceof Boolean && rhs instanceof Boolean) {
+//            if (operator.equals("==")) {
+//                return lhs.equals(rhs); // or (boolean)lhs == (boolean)rhs
+//            } else {
+//                return !lhs.equals(rhs); // or (boolean)lhs != (boolean)rhs
+//            }
+//        }
+//
+//        // If both are strings, check equality using .equals()
+//        if (lhs instanceof String && rhs instanceof String) {
+//            if (operator.equals("==")) {
+//                return lhs.equals(rhs);
+//            } else {
+//                return !lhs.equals(rhs);
+//            }
+//        }
 
         // If types are not compatible or operator is not recognized, flag an error
-        error.flag(INVALID_OPERATOR, ctx.getStart().getLine(), ctx.getText());
-        return null;
+        //error.flag(INVALID_OPERATOR, ctx.getStart().getLine(), ctx.getText());
+       // return null;
+    }
+
+    @Override
+    public Object visitSubstringCall(JavanaParser.SubstringCallContext ctx) {
+        return "a";
     }
 
     /**
