@@ -1,0 +1,153 @@
+Javana Hangman:
+
+
+
+@main(args: string[]) {
+    // Ensure two command-line arguments are provided
+    if (len(args) < 2) {
+        println("Error: Please provide a secret word (5-10 letters) and the maximum number of strikes (1-10).")
+        return
+    }
+
+    // Retrieve the secret word and maximum strikes from command-line arguments
+    var secretWord = args[0]
+    var maxStrikes = stringToInt(args[1])
+
+    // Validate the secret word and maximum strikes
+    if (secretWord.length < 5 || secretWord.length > 10 || !onlyLowercase(secretWord)) {
+        println("Error: The secret word should be 5-10 letters long and contain only lowercase letters.")
+        return
+    }
+    if (maxStrikes < 1 || maxStrikes > 10) {
+        println("Error: Maximum strikes should be a number between 1 and 10.")
+        return
+    }
+
+    // Initialize game variables
+    var placeholders = createPlaceholders(secretWord)
+    var remainingStrikes = maxStrikes
+    var guessedLetters = @string[26]  // Array for all possible English lowercase letters
+    var guessedCount = 0  // Track how many letters have been guessed
+
+    // Welcome message
+    printf("Welcome. Try and guess my secret word: %s\n", placeholders)
+    printf("You are allowed %d strikes\n", remainingStrikes)
+    println("Select a letter:")
+
+    // Game loop
+    while (remainingStrikes > 0 && !isWordGuessed(placeholders, secretWord)) {
+        var guessedLetter = readch()  // Read a single character input
+
+        // Check if the letter was already guessed
+        var alreadyGuessed = false
+        for (var i = 0; i < guessedCount; i + 1) {
+            if (guessedLetters[i] == guessedLetter) {
+                alreadyGuessed = true
+                break
+            }
+        }
+
+        if (alreadyGuessed) {
+            printf("'%s' was already guessed: %s\n", guessedLetter, placeholders)
+            println("Select a letter:")
+            continue
+        }
+
+        // Add the guessed letter to the guessedLetters array
+        guessedLetters[guessedCount] = guessedLetter
+        guessedCount = guessedCount + 1
+
+        // Check if the guessed letter is in the secret word
+        var foundInWord = false
+        for (var i = 0; i < secretWord.length; i + 1) {
+            if (stringEquals( substring(secretWord, i, i+1) , guessedLetter)) {
+                foundInWord = true
+                break
+            }
+        }
+
+        // Update the game state based on the guessed letter
+        if (foundInWord) {
+            var occurrences = countOccurrences(secretWord, guessedLetter)
+            placeholders = updatePlaceholders(secretWord, guessedLetter, placeholders)
+            printf("The letter '%s' appears %d time(s): %s\n", guessedLetter, occurrences, placeholders)
+        } else {
+            remainingStrikes = remainingStrikes - 1
+            printf("The letter '%s' does not appear. You have %d strike(s): %s\n", guessedLetter, remainingStrikes, placeholders)
+        }
+
+        println("Select a letter:")
+    }
+
+    // Check final game outcome
+    if (isWordGuessed(placeholders, secretWord)) {
+        printf("You won with %d guesses. Goodbye!\n", guessedCount)
+    } else {
+        println("You have struck out. Goodbye!")
+    }
+}
+
+func onlyLowercase(word: string) -> bool {
+    // Check if the string contains only lowercase letters
+    for (var i = 0; i < word.length; i + 1) {
+
+        var charInString = substring(word, i, i+1)
+
+        if ( stringCharToVal(charInString) < stringCharToVal("a") || stringCharToVal(charInString) > stringCharToVal("z") ) {
+            return false
+        }
+    }
+    return true
+}
+
+func createPlaceholders(secretWord: string) -> string {
+    // Create a string with underscores for each letter in the secret word
+    var placeholders = ""
+    for (var i = 0; i < secretWord.length;i + 1) {
+        placeholders = concat(placeholders, "_")
+        // Only add a space if it's not the last underscore
+
+    }
+    return placeholders
+}
+
+
+func countOccurrences(word: string, letter: string) -> int {
+    // Count the number of times a letter appears in the word
+    var count = 0
+    for (var i = 0; i < word.length; i + 1) {
+        if (stringEquals(substring(word, i, i+1), letter)) {
+            count = count + 1
+        }
+    }
+    return count
+}
+
+
+func updatePlaceholders(secretWord: string, letter: string, placeholders: string) -> string {
+    // Update placeholders based on correctly guessed letter
+    var newPlaceholders = ""
+    for (var i = 0; i < secretWord.length; i + 1) {
+        // Check if the guessed letter matches the current letter in the secret word
+        if (stringEquals(substring(secretWord, i, i+1), letter)) {
+            newPlaceholders = concat(newPlaceholders, letter)
+        } else {
+            newPlaceholders = concat(newPlaceholders, placeholders.charAt( i))
+        }
+
+    }
+    return newPlaceholders
+}
+
+
+
+func isWordGuessed(placeholders: string, secretWord : string) -> bool {
+    // Check if the word is fully guessed (no underscores remaining)
+    for (var i = 0; i < placeholders.length;  i + 1) {
+        if (stringEquals(substring(placeholders, i, i+1), "_") ){
+            return false
+        }
+    }
+
+ return true
+}

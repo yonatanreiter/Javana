@@ -1,0 +1,23 @@
+Javana Types:
+
+
+    @main() {
+
+      var g = @int[3]
+      var z = @string[2]
+
+    var num = 2
+
+    println(g["a"]) //datatype must be integer
+    if(z[0]) {} //datatype must be boolean
+
+    println(num[0]) //datatype must be array
+
+    num.a = 2 //type must be record
+
+    var b = concat("a", 1) //type must be string
+
+
+
+
+    }

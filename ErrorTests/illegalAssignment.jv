@@ -1,0 +1,10 @@
+Javana Types:
+
+
+    @main() {
+
+      const g = 1
+      g = 2
+
+
+    }

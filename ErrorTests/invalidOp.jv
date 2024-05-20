@@ -1,0 +1,10 @@
+Javana Testing:
+
+decl z : bool
+
+@main()
+{
+     "1" + "1" //invalid op
+
+}
+

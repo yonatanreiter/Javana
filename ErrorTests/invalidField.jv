@@ -1,0 +1,21 @@
+Javana RecordTesting:
+    record recordA {
+        a, b, c : int
+        d : string
+        e : bool
+    }
+
+
+    @main() {
+
+        var r3 = @recordA {
+            a = 1,
+            b = 2,
+            c = 3,
+            d = "hello",
+            e = false
+        }
+
+        println(r3.p)
+
+    }

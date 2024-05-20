@@ -1,0 +1,81 @@
+Javana RecordTesting:
+    record recordA {
+        a, b, c : int
+        d : string
+        e : bool
+    }
+
+    record recordB {
+        a, b, c : recordA
+        d: int[]
+        e: bool[]
+        f: string[]
+    }
+
+    record recordC {
+        a : recordB
+        b : recordA
+        c: recordB[]
+    }
+
+    record recordD {
+        e : recordD
+        e : recordB
+        f : recordD[]
+    }
+
+    decl myRecord : recordA
+    @main() {
+
+        var r3 = @recordA {
+            a = 1,
+            b = 2,
+            c = 3,
+            d = "hello",
+            e = false
+        }
+
+
+
+        var r1 = @recordB{
+            a = @recordA {
+                a = 1,
+                d = "hello",
+                e = false
+            },
+            d = @int[10],
+            e = @bool[10],
+            f = @string[10]
+        }
+
+        var r2 = @recordC {
+            c = @recordB[10]
+        }
+        r2.c[0] = @recordB {
+            f = @string[1]
+        }
+
+        var r4 = @recordA {
+            d = false,
+            e = 1,
+            a = "hello"
+        }
+
+
+        myRecord.a = 10
+        myRecord.b = 1
+        myRecord.c = 3
+
+        myRecord.d = "hello"
+
+        myRecord.e = false
+
+
+        myRecord.a = "bye"
+        myRecord.b = true
+
+        myRecord.d = 1
+
+        myRecord.e = "please"
+
+    }

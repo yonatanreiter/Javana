@@ -1,0 +1,44 @@
+Javana IfStatementErrors:
+    decl a, b: int
+    var c = "hello"
+    @main() {
+        var x = 1
+        var y, z = 100
+
+        if(x == "a") {
+            var b = 10
+            var d = 100
+        }
+
+        println(d)
+
+        if(x) {
+            var a = "goodbye"
+        }
+
+        if(x + "a" == 0) {}
+
+        if(x == 0) {
+            var x = 0
+        } else {
+            var x = "foo"
+        }
+
+        if(a + b == 100) {
+            if(b - a < 10) {
+                if(b / a > -100) {
+                    if(a * b >= 32) {
+                        var a = "bar"
+                        var b = "fizz"
+                        var d = 123
+                    }
+                    println(d)
+                }
+                println(d)
+            }
+            println(d)
+        }
+
+        
+
+    }

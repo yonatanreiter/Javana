@@ -1,0 +1,39 @@
+Javana ArrayErrors:
+    decl x, y: int[]
+    decl z : string[]
+
+    var g = @int[3]
+
+    @main() {
+
+        var a = @int[4]
+        var b = @string[4]
+        var c = @bool[4]
+
+
+        a[0] = a[1]
+        a[0] = b //incompatible
+        a[0] = 1
+
+        b[0] = c //incompatible
+        b[0] = "hello world"
+        b[0] = false //incompatible
+
+        print(1 + g[0])
+
+        a[4 + 1] = a [2 - 1]
+
+
+
+        println(a["a"]) //datatype must be integer
+        println(b[false]) //datatype must be integer
+
+
+        if(c[0]) {
+            //var b = @bool[10]
+        }
+
+        if(b[0]) {} //datatype must be boolean
+
+
+    }

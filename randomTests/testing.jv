@@ -1,0 +1,65 @@
+Javana Testing:
+
+@main()
+{
+    var a = 1
+    var x, b = 10
+    var arr = @int[4]
+    arr[0] = b
+    var boolArray = @bool[1]
+    boolArray[0] = true
+
+
+
+    if(boolArray[0]){
+        println("bool array is true")
+    }
+
+
+
+
+    if(a > 1){
+
+        println("a bigger than 1")
+    }
+    else{
+        print("a less than 1")
+    }
+
+    for(var z = 0; z < 2; z + 1) {
+        println("random")
+    }
+    foreach(kobe in boolArray){
+        println(kobe)
+    }
+
+    while(x > 0){
+        x = x - 1
+    }
+
+    var function = add(2,3)
+
+
+    var r1 = @recordB{
+                a = 1,
+                d = @int[10],
+                e = @bool[10],
+                f = @string[10]
+    }
+
+    var readLine = stringToInt(readln())
+    println(readLine)
+
+}
+
+func add(a: int, b: int) -> int
+{
+    return a + b
+}
+
+record recordB {
+        a, b, c : int
+        d: int[]
+        e: bool[]
+        f: string[]
+    }

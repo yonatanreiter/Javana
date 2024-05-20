@@ -1,0 +1,11 @@
+Javana Testing:
+
+decl z : int
+
+@main()
+{
+    z = "lebron" //type mismatch
+     var x = 1 + "1" //type mismatch
+
+}
+

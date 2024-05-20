@@ -1,0 +1,28 @@
+Javana ForLoopErrors:
+    var z = 0
+    const a = 100
+    decl b : int
+    @main() {
+        var x = 10
+
+        for(var z = 0; z < 10; z + 1) {
+            var z = 100
+            var x = "a"
+        }
+        for(var x = 0; x < 10; x + 1) {}
+        for(var y = 0; y + 10; y + 1) {}
+        for(var y = "a"; y < 10; y + 1) {}
+        for(var a = 0; a < 10; a + 1) {}
+        for(var b = 0; b < 10; b + 1) {}
+
+        for(var y = 0; y < 10; y + 1) {
+            var z = 4
+            for(var y = 0; y < 10; y + 1) {
+                var y = "a"
+            }
+
+            for(var z = 0; z < 10; z + 1) {}
+
+            for(var x = 0; x < 10; x + 1) {}
+        }
+    }

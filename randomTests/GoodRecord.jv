@@ -1,0 +1,79 @@
+Javana GoodRecord:
+    record recordA {
+        a, b, c : int
+        d : string
+        e : bool
+    }
+
+    record recordB {
+        a, b, c : recordA
+        d: int[]
+        e: bool[]
+        f: string[]
+    }
+
+    record recordC {
+        a : recordB
+        b : recordA
+        c: recordB[]
+    }
+
+    record recordD {
+        e : recordD
+        f : recordD[]
+    }
+
+    decl myRecord : recordA
+    @main() {
+
+        var recA = @recordA {
+            a = 1,
+            b = 2,
+            c = 3,
+            d = "hello",
+            e = false
+        }
+
+
+
+        var recB = @recordB{
+            d = @int[10],
+            e = @bool[10],
+            f = @string[10]
+        }
+
+        var r2 = @recordC {
+            c = @recordB[10]
+        }
+
+
+        var r4 = @recordA {
+            d = "false",
+            e = true,
+            a = 1
+        }
+
+        myRecord = @recordA{
+         d = "false",
+                     e = true,
+                     a = 1
+        }
+
+
+        myRecord.a = 10
+        myRecord.b = 1
+        myRecord.c = 3
+
+        myRecord.d = "hello"
+
+        myRecord.e = false
+
+
+        myRecord.a = 34
+        myRecord.b = 22
+
+        myRecord.d = "lebron"
+
+        myRecord.e = false
+
+    }

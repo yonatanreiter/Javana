@@ -1,0 +1,8 @@
+Javana Testing:
+
+@main()
+{
+     var g = @lebron[3] //invalid type
+
+}
+
